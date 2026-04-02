@@ -22,6 +22,17 @@ source .venv/bin/activate
 python tests/validate_all.py
 ```
 
+Wi‑Fi SSID cross-check uses `collectors.interface_collector.wifi_airport_device()` (from `networksetup -listallhardwareports`), not a hardcoded `en0`. RSSI sanity uses a plausible dBm window; values outside the older −100..−10 band are WARN only.
+
+## Unit tests (pytest)
+
+Fast, hermetic checks (parsers, thresholds, recommendations; mocked DNS):
+
+```bash
+source .venv/bin/activate
+pytest -q
+```
+
 ## Compile check
 
 Always verify syntax before running:
