@@ -1,0 +1,36 @@
+---
+description: Testing and validation practices
+globs: tests/**/*.py
+alwaysApply: false
+---
+
+# Testing
+
+## Validation suite
+
+`tests/validate_all.py` is the primary test. It:
+
+1. Runs every collector against real macOS system data
+2. Cross-checks results against raw CLI output (ping, dig, route)
+3. Validates analysis module thresholds and recommendations
+4. Reports pass/fail/warn with colored output
+
+Run after any collector or analysis change:
+
+```bash
+source .venv/bin/activate
+python tests/validate_all.py
+```
+
+## Compile check
+
+Always verify syntax before running:
+
+```bash
+python -m py_compile <changed_file.py>
+```
+
+## Known warnings
+
+- SSID/BSSID returning None is expected without Location Services — test treats this as WARN not FAIL
+- matplotlib tight_layout warnings are suppressed in theme.py

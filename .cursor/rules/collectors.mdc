@@ -1,0 +1,37 @@
+---
+description: Patterns for writing data collectors
+globs: collectors/**/*.py
+alwaysApply: false
+---
+
+# Collector Patterns
+
+## Thread safety
+
+Collectors run in daemon threads. Push results to UI via `queue_fn`:
+
+```python
+def _loop(self) -> None:
+    while not self._stop.is_set():
+        data = self._collect()
+        self.queue_fn(lambda d=data: self.on_data(d))
+        self._stop.wait(self.interval_s)
+```
+
+## Return plain dicts
+
+Every collector function returns `Dict[str, Any]`. No custom classes or dataclasses for data transfer.
+
+## Subprocess rules
+
+- Always set `timeout=` (8s for DNS, 120s for speed/traceroute)
+- Always use `capture_output=True, text=True`
+- Catch `subprocess.TimeoutExpired` and `FileNotFoundError` separately
+- Check tool availability with `shutil.which()` before first use
+
+## CoreWLAN specifics
+
+- Wrap every attribute access in try/except — PyObjC can throw on any call
+- SSID/BSSID may be None without Location Services — not an error
+- Use `scanForNetworksWithName_error_(None, None)` — returns (result, error) tuple
+- PHY mode constants vary between macOS versions (int vs bitflags) — map both

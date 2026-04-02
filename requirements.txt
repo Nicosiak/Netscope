@@ -1,0 +1,7 @@
+customtkinter>=5.2.2
+pyobjc-framework-CoreWLAN>=10.3
+pyobjc-framework-CoreLocation>=10.3
+icmplib>=3.0.4
+matplotlib>=3.9
+Pillow>=10.0
+pytest>=8.0

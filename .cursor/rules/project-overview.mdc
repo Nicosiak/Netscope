@@ -1,0 +1,24 @@
+---
+description: Project structure and conventions for NetScope
+alwaysApply: true
+---
+
+# NetScope
+
+macOS WiFi & network diagnostics desktop app. Python 3.11+, customtkinter, CoreWLAN via PyObjC, matplotlib charts.
+
+## Structure
+
+- `collectors/` — Background data collection. Each file returns plain dicts. Runs in daemon threads.
+- `ui/tabs/` — Tab UI classes. Receive data via `on_data(dict)` callbacks scheduled on the main thread.
+- `ui/theme.py` — Single source of truth for all colors. WiFiman-inspired dark palette.
+- `analysis/` — Thresholds, signal classification, recommendation text generation.
+- `tests/validate_all.py` — Cross-checks every collector against real macOS CLI output.
+
+## Key conventions
+
+- All colors imported from `ui.theme` — never hardcode hex in tab files
+- Thread safety via `root.after(0, fn)` — never touch widgets from background threads
+- All subprocess calls must have `timeout=` set
+- CoreWLAN may return None for SSID/BSSID without Location Services — always handle gracefully
+- Charts use `draw_idle()` not `draw()`, and call `theme.style_figure(fig)` after setup

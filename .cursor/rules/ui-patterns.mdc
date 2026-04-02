@@ -1,0 +1,45 @@
+---
+description: UI patterns and styling rules for customtkinter tabs
+globs: ui/**/*.py
+alwaysApply: false
+---
+
+# UI Patterns
+
+## Dark theme only
+
+Always use `ctk.set_appearance_mode("Dark")`. All surface colors from `ui.theme`:
+
+```python
+from ui import theme
+
+card = ctk.CTkFrame(parent, fg_color=theme.BG_CARD, corner_radius=10,
+                     border_width=1, border_color=theme.BORDER)
+```
+
+## Card pattern
+
+Every section is a card: `corner_radius=10`, `border_width=1`, `border_color=theme.BORDER`, `fg_color=theme.BG_CARD`. Inner content padded with `padx=20`.
+
+## Charts
+
+```python
+fig = Figure(figsize=(5, 2.2), dpi=100)
+ax = fig.add_subplot(111)
+theme.style_figure(fig)  # MUST call after adding axes
+canvas = FigureCanvasTkAgg(fig, master=card)
+canvas.get_tk_widget().configure(bg=theme.CHART_BG, highlightthickness=0)
+canvas.draw_idle()  # use draw_idle(), never draw()
+```
+
+## Status bar updates
+
+Use `_sb_set()` in app.py to avoid flicker — only reconfigure when value changes.
+
+## Hidden networks
+
+Filter networks with null SSID from display. Show "X visible, Y hidden" count in the header.
+
+## Scrolling
+
+Keep the top section (PHY bar + chart + AP card) fixed/visible. Only secondary content (factors, channels, networks) goes in a scrollable frame.
