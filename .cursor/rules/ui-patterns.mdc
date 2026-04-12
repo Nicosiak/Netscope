@@ -1,45 +1,12 @@
 ---
-description: UI patterns and styling rules for customtkinter tabs
-globs: ui/**/*.py
+description: Web UI patterns for NetScope (HTML/JS)
+globs: web/frontend/**/*
 alwaysApply: false
 ---
 
-# UI Patterns
+# Web UI patterns
 
-## Dark theme only
-
-Always use `ctk.set_appearance_mode("Dark")`. All surface colors from `ui.theme`:
-
-```python
-from ui import theme
-
-card = ctk.CTkFrame(parent, fg_color=theme.BG_CARD, corner_radius=10,
-                     border_width=1, border_color=theme.BORDER)
-```
-
-## Card pattern
-
-Every section is a card: `corner_radius=10`, `border_width=1`, `border_color=theme.BORDER`, `fg_color=theme.BG_CARD`. Inner content padded with `padx=20`.
-
-## Charts
-
-```python
-fig = Figure(figsize=(5, 2.2), dpi=100)
-ax = fig.add_subplot(111)
-theme.style_figure(fig)  # MUST call after adding axes
-canvas = FigureCanvasTkAgg(fig, master=card)
-canvas.get_tk_widget().configure(bg=theme.CHART_BG, highlightthickness=0)
-canvas.draw_idle()  # use draw_idle(), never draw()
-```
-
-## Status bar updates
-
-Use `_sb_set()` in app.py to avoid flicker — only reconfigure when value changes.
-
-## Hidden networks
-
-Filter networks with null SSID from display. Show "X visible, Y hidden" count in the header.
-
-## Scrolling
-
-Keep the top section (PHY bar + chart + AP card) fixed/visible. Only secondary content (factors, channels, networks) goes in a scrollable frame.
+- **Theme:** single palette in `web/frontend/index.html` and `app.js` — do not reference deleted `ui/theme.py`.
+- **Background** `#0a0c0f`, **surface** `#0d1117`, **borders** `#1a2030`; signal greens/ambers/reds per AGENTS.md.
+- **Threading:** only the FastAPI/WebSocket thread mutates shared backend state; frontend is event-driven DOM updates.
+- **Charts:** RSSI — canvas + `requestAnimationFrame`; ping — Chart.js with `animation: false`.

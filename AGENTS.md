@@ -1,39 +1,62 @@
 # NetScope — Agent Guidelines
 
-## Project Overview
+**User overview:** README.md · **Architecture & security:** docs/OVERVIEW.md · **Deep dive (diagrams):** docs/PROJECT_DEEP_DIVE.md
 
-macOS desktop WiFi & network diagnostics tool. Python + customtkinter + CoreWLAN + matplotlib.
-Dark-themed UI inspired by Ubiquiti WiFiman. Runs locally, no server, no database.
+---
 
-## Architecture
+## Project
+
+macOS WiFi and network diagnostics **web app**. **Current release: v1.0.0** (see repo root `VERSION` and `CHANGELOG.md`). Python 3.11+ · CoreWLAN (PyObjC) · FastAPI + WebSocket · PyWebView. **Local only:** binds to `127.0.0.1`, no remote service. **SQLite** under `~/.netscope/` is used only for optional **session snapshots** on this machine — not a shared or cloud database.
+
+---
+
+## Folder structure
 
 ```
-main.py              → Entry point, sys.path setup
-ui/app.py            → CTk main window, tab routing, status bar, thread wiring
-ui/theme.py          → All colors, chart styling (WiFiman dark palette)
-ui/tabs/wifi_tab.py  → Signal tab: PHY bar, RSSI chart, AP card, speed factors, channel chart, networks
-ui/tabs/ping_tab.py  → Ping tab: target selector, RTT chart, stat cards
-ui/tabs/diagnostics_tab.py → DNS comparison, speed test, iperf3, traceroute, interfaces
-collectors/          → Background data collection (threads), each returns plain dicts
-analysis/            → Thresholds, color classification, recommendation engine
-tests/               → validate_all.py cross-checks collectors against system CLI
+collectors/            → Data acquisition — plain dicts, subprocess timeouts, daemon threads where used
+core/                  → Sanitization, SQLite session storage, alerts, health bus, session model
+analysis/              → Thresholds, classification, recommendations (no UI, no I/O)
+web/
+  backend/server.py    → FastAPI app, WebSocket feed, API routes
+  backend/payload.py   → Unified live dict ~250 ms tick
+  backend/ping_worker.py, state.py, ping_stats.py
+  frontend/index.html, app.js  → UI; theme hex lives here only
+  main.py              → Starts uvicorn; opens PyWebView (or print URL for browser-only)
+tests/                 → pytest; `tests/validate_all.py` = optional live macOS CLI cross-check
+scripts/               → venv setup, test runner, cache clean — change only for broken paths or when asked
+docs/                  → OVERVIEW.md, PROJECT_DEEP_DIVE.md (Mermaid diagrams, flows)
 ```
 
-## Key Patterns
+---
 
-- **Thread safety**: Collectors run in daemon threads. UI updates ONLY via `root.after(0, callback)` (the `queue_fn` pattern). Never touch CTk widgets from a background thread.
-- **Data flow**: Collector → dict → queue_fn → tab.on_data(dict). All data is plain Python dicts, no ORM or models.
-- **Theme**: All colors come from `ui/theme.py`. Never hardcode hex colors in tab files — import from theme.
-- **Charts**: matplotlib with `FigureCanvasTkAgg`. Always call `theme.style_figure(fig)` after creating axes. Use `draw_idle()` not `draw()`.
-- **Status bar caching**: `app.py` uses `_sb_set()` to avoid flicker — only reconfigures labels when value changes.
+## Key patterns
+
+- **Collectors** — live in `collectors/`; imported by `web/backend/server.py` (and tests). Do not fork collector logic into the web tree except the **documented** duplicate: `web/backend/ping_stats.stats_from_rtt_history` mirrors `collectors.ping_collector` so `payload` does not import `icmplib` at module load; keep them in sync (see `tests/test_ping_collector.py`).
+- **Data flow** — Collector → dict → WebSocket JSON → `app.js` → DOM. One unified payload per tick.
+- **Charts** — RSSI: canvas in `app.js` + `requestAnimationFrame`. Ping: Chart.js, `animation: false`.
+- **Theme** — Hex only in `web/frontend/index.html` and `app.js`. No `ui/theme.py`.
+
+---
+
+## UI design (web)
+
+- Background `#0a0c0f` · Surface `#0d1117` · Borders `#1a2030` · Font: JetBrains Mono
+- Signal colors: green `#22c55e` ≥ -70 · amber `#f59e0b` -70 to -80 · red `#ef4444` ≤ -80
+- Metric strip: Signal, SNR, PHY Speed, Ping, Packet Loss — bold values
+- RSSI chart: canvas line, 250 ms updates from WebSocket
+- Status bar: connection dot · AP name · channel · PHY mode · width
+- Side panel ~260px: AP name/BSSID · signal/SNR bars · latency/loss
+
+---
 
 ## Rules
 
-- Always dark mode (`ctk.set_appearance_mode("Dark")`)
-- CoreWLAN requires Location Services — handle None gracefully for SSID/BSSID
-- Filter hidden networks (null SSID) from display, show count separately
-- `networkQuality` and `iperf3` may not be installed — check with `shutil.which()` and disable UI gracefully
-- All subprocess calls must have timeouts
-- Keep charts small — the app should not require excessive scrolling
-- Run `python -m py_compile` on changed files before considering work done
-- Run `tests/validate_all.py` to verify collectors against real system data
+- Only read files relevant to the current task.
+- State in one sentence what you are changing and why — then do it.
+- Make the smallest change that solves the problem. No unrequested refactors.
+- For web work: **UI** in `web/frontend/` only; **data and APIs** in `web/backend/` (and `collectors/` / `core/` / `analysis/` as appropriate). Keep layers separate.
+- Do not wire new frontend fields until the WebSocket payload includes them (verify in browser devtools if needed).
+- All subprocess calls must have `timeout=`. Use `shutil.which()` before `networkQuality`, `iperf3`, etc.
+- Handle CoreWLAN `None` gracefully — disconnected state, null fields, no crashes.
+- Only run `ruff check` on files you touched. Run full `pytest tests/` only when asked or when changing test layout.
+- Do not summarize the task back, suggest follow-ups, or over-explain. Just do the work.

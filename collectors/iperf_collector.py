@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
 from typing import Any, Callable, Dict, Optional
+
+from core.host_sanitize import normalize_diagnostic_host
+
+_MAX_CAPTURE_CHARS = 2_000_000
 
 
 def iperf3_available() -> bool:
@@ -30,26 +33,60 @@ def run_iperf3(
         out["raw"] = "iperf3 not found. Install with: brew install iperf3"
         return out
 
-    cmd = ["iperf3", "-c", server, "-t", str(duration), "-J"]
+    norm = normalize_diagnostic_host(server.strip())
+    if not norm:
+        out["raw"] = "Invalid server hostname or IP."
+        return out
+    out["server"] = norm
+
+    cmd = ["iperf3", "-c", norm, "-t", str(duration), "-J"]
     if reverse:
         cmd.append("-R")
     if udp:
         cmd.extend(["-u", "-b", "0"])
 
+    proc: subprocess.Popen[str] | None = None
     try:
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         )
-        stdout_parts = []
+        stdout_parts: list[str] = []
+        captured = 0
+        truncated = False
         if proc.stdout:
             for line in proc.stdout:
                 stdout_parts.append(line)
+                captured += len(line)
                 if on_line:
                     on_line(line.rstrip())
-        proc.wait(timeout=duration + 30)
-
-        raw = "".join(stdout_parts)
-        stderr = proc.stderr.read() if proc.stderr else ""
+                if captured >= _MAX_CAPTURE_CHARS:
+                    truncated = True
+                    break
+        assert proc is not None
+        if truncated:
+            proc.kill()
+            try:
+                proc.wait(timeout=5.0)
+            except Exception:
+                pass
+            raw = "".join(stdout_parts)
+            raw = (raw + "\n[output truncated]") if raw.strip() else "[output truncated]"
+        else:
+            try:
+                proc.wait(timeout=float(duration) + 30.0)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                try:
+                    proc.wait(timeout=5.0)
+                except Exception:
+                    pass
+            raw = "".join(stdout_parts)
+        stderr = ""
+        if proc.stderr:
+            try:
+                stderr = proc.stderr.read()
+            except Exception:
+                stderr = ""
         if not raw.strip() and stderr:
             raw = stderr
         out["raw"] = raw
@@ -58,9 +95,6 @@ def run_iperf3(
             data = json.loads(raw)
             out["json"] = data
             out["ok"] = True
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        out["raw"] = "iperf3 timed out."
     except json.JSONDecodeError as e:
         out["raw"] = f"JSON parse error: {e}"
     except Exception as e:
@@ -87,7 +121,6 @@ def summarize_result(data: Dict[str, Any]) -> Dict[str, Any]:
     # TCP
     tcp_sent = end.get("sum_sent", {})
     tcp_recv = end.get("sum_received", {})
-    streams = end.get("streams", [])
 
     if tcp_recv.get("bits_per_second"):
         bps = tcp_recv["bits_per_second"]

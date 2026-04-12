@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import re
-import subprocess
 from typing import Any, Dict, List, Optional
+
+from collectors._subprocess import merged_output, run_text
 
 
 def dig_query(domain: str = "google.com", server: Optional[str] = None) -> Dict[str, Any]:
@@ -14,8 +15,8 @@ def dig_query(domain: str = "google.com", server: Optional[str] = None) -> Dict[
         cmd.append(f"@{server}")
     cmd += [domain, "+stats"]
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=8)
-        raw = (p.stdout or "") + (p.stderr or "")
+        p = run_text(cmd, timeout=8.0)
+        raw = merged_output(p)
         out["raw"] = raw
         m = re.search(r";\s*SERVER:\s*([^\#]+)", raw)
         if m:

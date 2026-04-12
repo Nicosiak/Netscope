@@ -5,20 +5,21 @@ alwaysApply: true
 
 # NetScope
 
-macOS WiFi & network diagnostics desktop app. Python 3.11+, customtkinter, CoreWLAN via PyObjC, matplotlib charts.
+macOS WiFi and network diagnostics **web app** (FastAPI + WebSocket + PyWebView). Python 3.12+ recommended (3.11+). CoreWLAN via PyObjC. Local only.
 
 ## Structure
 
-- `collectors/` — Background data collection. Each file returns plain dicts. Runs in daemon threads.
-- `ui/tabs/` — Tab UI classes. Receive data via `on_data(dict)` callbacks scheduled on the main thread.
-- `ui/theme.py` — Single source of truth for all colors. WiFiman-inspired dark palette.
-- `analysis/` — Thresholds, signal classification, recommendation text generation.
-- `tests/validate_all.py` — Cross-checks every collector against real macOS CLI output.
+- `collectors/` — Background data collection; plain dicts; daemon threads where used; subprocess timeouts.
+- `core/` — Storage, session, alerts, health bus, sanitization.
+- `analysis/` — Thresholds, classification, recommendations (no UI).
+- `web/backend/` — FastAPI, WebSocket tick, payload build, ping worker.
+- `web/frontend/` — `index.html`, `app.js` — full UI; theme hex lives here (not Python).
+- `web/main.py` — Starts uvicorn + optional PyWebView window.
+- `tests/validate_all.py` — Optional live macOS cross-check vs CLI.
 
 ## Key conventions
 
-- All colors imported from `ui.theme` — never hardcode hex in tab files
-- Thread safety via `root.after(0, fn)` — never touch widgets from background threads
-- All subprocess calls must have `timeout=` set
-- CoreWLAN may return None for SSID/BSSID without Location Services — always handle gracefully
-- Charts use `draw_idle()` not `draw()`, and call `theme.style_figure(fig)` after setup
+- **Web:** data path is Collector → dict → WebSocket JSON → `app.js` → DOM.
+- **Subprocesses:** always `timeout=`; prefer argument lists, never `shell=True` for user input.
+- **CoreWLAN:** SSID/BSSID may be None without Location Services — handle gracefully.
+- **Charts:** RSSI canvas uses `requestAnimationFrame`; ping Chart.js with `animation: false`.

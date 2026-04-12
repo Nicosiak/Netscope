@@ -3,27 +3,19 @@
 from __future__ import annotations
 
 import re
-import subprocess
 from typing import Any, Dict, List, Optional
+
+from collectors._subprocess import run_merged_safe
 
 
 def _run(args: List[str], timeout: float = 10.0) -> str:
-    try:
-        p = subprocess.run(
-            args,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-        return (p.stdout or "") + (p.stderr or "")
-    except Exception as e:
-        return f"(error running {' '.join(args)}: {e})"
+    return run_merged_safe(args, timeout=timeout)
 
 
 def default_wifi_service_name() -> str:
-    # Prefer English "Wi-Fi" on macOS US
+    # Prefer English "Wi-Fi" on macOS US; call subprocess once and check both names.
+    out = _run(["networksetup", "-listallnetworkservices"])
     for name in ("Wi-Fi", "Ethernet"):
-        out = _run(["networksetup", "-listallnetworkservices"])
         if name in out:
             return name
     return "Wi-Fi"

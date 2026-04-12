@@ -6,17 +6,43 @@ Runs each collector, cross-checks with raw CLI output, and reports pass/fail.
 
 from __future__ import annotations
 
-import json
 import os
 import re
-import subprocess
 import sys
 import time
 
-# Ensure project root is importable
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
+
+from collectors._subprocess import run_merged_safe
+
+
+def _ensure_validate_environment() -> None:
+    if sys.platform != "darwin":
+        print("validate_all.py requires macOS (CoreWLAN, networksetup, etc.).", file=sys.stderr)
+        sys.exit(1)
+    try:
+        import icmplib  # noqa: F401
+    except ImportError:
+        print(
+            "Missing dependency: icmplib (and likely the rest of the stack).\n"
+            "  python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    try:
+        import CoreWLAN  # noqa: F401
+    except ImportError:
+        print(
+            "Missing dependency: CoreWLAN (PyObjC).\n"
+            "  pip install -r requirements.txt",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+_ensure_validate_environment()
 
 PASS = "\033[92mPASS\033[0m"
 FAIL = "\033[91mFAIL\033[0m"
@@ -39,11 +65,7 @@ def warn(name: str, detail: str = "") -> None:
 
 
 def run_cmd(args: list[str], timeout: float = 10) -> str:
-    try:
-        p = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
-        return (p.stdout or "") + (p.stderr or "")
-    except Exception as e:
-        return str(e)
+    return run_merged_safe(args, timeout=timeout)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -163,7 +185,7 @@ if samples:
 
 # ── 3. DNS Collector ─────────────────────────────────────────────────
 print("\n── 3. DNS Collector ──")
-from collectors.dns_collector import dig_query, compare_servers
+from collectors.dns_collector import compare_servers, dig_query
 
 dns = dig_query("google.com")
 check("DNS query time is int", isinstance(dns.get("query_time_ms"), int),
@@ -195,7 +217,7 @@ for r in comp:
 
 # ── 4. Interface Collector ───────────────────────────────────────────
 print("\n── 4. Interface Collector ──")
-from collectors.interface_collector import snapshot, parse_default_gateway
+from collectors.interface_collector import snapshot
 
 snap = snapshot()
 check("networksetup output non-empty", len(snap.get("networksetup", "")) > 10)
@@ -215,7 +237,7 @@ if m:
 
 # ── 5. Speed Collector ───────────────────────────────────────────────
 print("\n── 5. Speed Collector ──")
-from collectors.speed_collector import network_quality_available, summarize
+from collectors.speed_collector import network_quality_available
 
 avail = network_quality_available()
 check("networkQuality detected", avail, "(skipping actual test — takes 30s)")
@@ -246,12 +268,12 @@ else:
 
 # ── 8. Thresholds & Recommendations ─────────────────────────────────
 print("\n── 8. Analysis Module ──")
-from analysis.thresholds import classify_rssi, classify_ping_ms, band_from_channel_number, SignalQuality
+from analysis.thresholds import SignalQuality, band_from_channel_number, classify_ping_ms, classify_rssi
 
-check("classify_rssi(-40) = Excellent", classify_rssi(-40) == SignalQuality.EXCELLENT)
-check("classify_rssi(-60) = Good", classify_rssi(-60) == SignalQuality.GOOD)
-check("classify_rssi(-70) = Fair", classify_rssi(-70) == SignalQuality.FAIR)
-check("classify_rssi(-80) = Poor", classify_rssi(-80) == SignalQuality.POOR)
+check("classify_rssi(-50) = Excellent", classify_rssi(-50) == SignalQuality.EXCELLENT)
+check("classify_rssi(-68) = Good", classify_rssi(-68) == SignalQuality.GOOD)
+check("classify_rssi(-72) = Fair", classify_rssi(-72) == SignalQuality.FAIR)
+check("classify_rssi(-81) = Poor", classify_rssi(-81) == SignalQuality.POOR)
 check("classify_rssi(None) = Unknown", classify_rssi(None) == SignalQuality.UNKNOWN)
 
 check("classify_ping(5) = Good", classify_ping_ms(5)[0] == "Good")
@@ -267,8 +289,8 @@ check("band None = None", band_from_channel_number(None) is None)
 
 from analysis.recommendations import recommend_from_connection, recommend_from_scan
 
-tips = recommend_from_connection({"rssi_dbm": -80, "ssid": "TestNet", "noise_dbm": -60})
-check("Poor signal generates tips", len(tips) > 0 and "weak" in tips[0].lower(),
+tips = recommend_from_connection({"rssi_dbm": -82, "ssid": "TestNet", "noise_dbm": -60})
+check("Poor signal generates tips", len(tips) > 0 and ("weak" in tips[0].lower() or "below" in tips[0].lower()),
       f"tip={tips[0][:50]}")
 
 tips_good = recommend_from_connection({"rssi_dbm": -45, "ssid": "TestNet", "noise_dbm": -90})

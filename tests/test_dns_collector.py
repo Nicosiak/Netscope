@@ -15,8 +15,8 @@ def test_dig_query_parses_query_time_and_server() -> None:
 ;; SERVER: 192.168.1.1#53(192.168.1.1)
 ;; Query time: 14 msec
 """
-    with patch("collectors.dns_collector.subprocess.run") as run:
-        run.return_value = MagicMock(stdout=fake_stdout, stderr="")
+    with patch("collectors.dns_collector.run_text") as run_text:
+        run_text.return_value = MagicMock(stdout=fake_stdout, stderr="")
         out = dig_query("google.com")
         assert out["query_time_ms"] == 14
         assert out["server"] is not None
@@ -24,7 +24,7 @@ def test_dig_query_parses_query_time_and_server() -> None:
 
 
 def test_dig_query_handles_subprocess_error() -> None:
-    with patch("collectors.dns_collector.subprocess.run", side_effect=OSError("boom")):
+    with patch("collectors.dns_collector.run_text", side_effect=OSError("boom")):
         out = dig_query("example.com")
         assert out["query_time_ms"] is None
         assert "boom" in out["raw"]

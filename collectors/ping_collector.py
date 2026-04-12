@@ -6,9 +6,36 @@ import statistics
 import threading
 import time
 from collections import deque
-from typing import Callable, Deque, Dict, List, Optional
+from typing import Callable, Deque, Dict, Optional, Sequence
 
 from icmplib import ping
+
+from core.health_bus import bus
+from core.host_sanitize import normalize_diagnostic_host
+
+
+def stats_from_rtt_history(history: Sequence[Optional[float]]) -> Dict[str, Optional[float]]:
+    """
+    Rolling min/max/avg RTT, jitter (population stdev), and loss % from a history
+    of successful RTT samples (float) and failed samples (None).
+    """
+    valid = [x for x in history if x is not None]
+    total = len(history)
+    received = len(valid)
+    loss_pct = 100.0 * (total - received) / total if total else 0.0
+    jitter: Optional[float] = None
+    if len(valid) >= 2:
+        try:
+            jitter = float(statistics.pstdev(valid))
+        except statistics.StatisticsError:
+            jitter = None
+    return {
+        "min_ms": min(valid) if valid else None,
+        "max_ms": max(valid) if valid else None,
+        "avg_ms": (sum(valid) / len(valid)) if valid else None,
+        "jitter_ms": jitter,
+        "loss_pct": loss_pct,
+    }
 
 
 class PingSampler:
@@ -34,57 +61,56 @@ class PingSampler:
         self.on_sample: Optional[Callable[[Dict], None]] = None
 
     def set_target(self, target: str) -> None:
-        self.target = target.strip() or self.target
+        n = normalize_diagnostic_host(target.strip())
+        if n:
+            self.target = n
 
     def _emit(self, payload: Dict) -> None:
-        if self.on_sample:
-            self.on_sample(payload)
+        cb = self.on_sample
+        if cb:
+            cb(payload)
 
     def _loop(self) -> None:
         while not self._stop.is_set():
-            rtt: Optional[float] = None
-            lost = False
             try:
-                # Unprivileged ICMP works on recent macOS without root
-                res = ping(self.target, count=1, timeout=1.5, privileged=False)
-                if res.packets_received > 0 and res.avg_rtt is not None:
-                    rtt = float(res.avg_rtt)
-                else:
-                    lost = True
-            except Exception:
-                lost = True
-
-            self._history.append(None if lost else rtt)
-
-            valid = [x for x in self._history if x is not None]
-            total = len(self._history)
-            received = len(valid)
-            loss_pct = 100.0 * (total - received) / total if total else 0.0
-
-            jitter: Optional[float] = None
-            if len(valid) >= 2:
+                rtt: Optional[float] = None
+                lost = False
                 try:
-                    jitter = float(statistics.pstdev(valid))
-                except statistics.StatisticsError:
-                    jitter = None
+                    res = ping(self.target, count=1, timeout=1.5, privileged=False)
+                    if res.packets_received > 0 and res.avg_rtt is not None:
+                        rtt = float(res.avg_rtt)
+                    else:
+                        lost = True
+                except Exception:
+                    lost = True
 
-            payload = {
-                "target": self.target,
-                "rtt_ms": rtt,
-                "lost": lost,
-                "history_ms": list(self._history),
-                "min_ms": min(valid) if valid else None,
-                "max_ms": max(valid) if valid else None,
-                "avg_ms": (sum(valid) / len(valid)) if valid else None,
-                "jitter_ms": jitter,
-                "loss_pct": loss_pct,
-                "ts": time.time(),
-            }
+                self._history.append(None if lost else rtt)
 
-            try:
-                self.queue_fn(lambda p=payload: self._emit(p))
-            except Exception:
-                pass
+                hist_list = list(self._history)
+                stats = stats_from_rtt_history(hist_list)
+                payload = {
+                    "target": self.target,
+                    "rtt_ms": rtt,
+                    "lost": lost,
+                    "history_ms": hist_list,
+                    **stats,
+                    "ts": time.time(),
+                }
+
+                try:
+                    self.queue_fn(lambda p=payload: self._emit(p))
+                except Exception:
+                    pass
+            except Exception as e:
+                msg = f"{type(e).__name__}: {e}"
+
+                def err_cb(m: str = msg) -> None:
+                    bus.emit_error("ping", m)
+
+                try:
+                    self.queue_fn(err_cb)
+                except Exception:
+                    pass
 
             self._stop.wait(self.interval_s)
 

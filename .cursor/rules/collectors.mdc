@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## Thread safety
 
-Collectors run in daemon threads. Push results to UI via `queue_fn`:
+Collectors run in daemon threads (or are called from the web tick). Push results to the UI layer via whatever bridge the host uses (e.g. `queue_fn` for Tk, or the web server merging dicts into the WebSocket payload):
 
 ```python
 def _loop(self) -> None:

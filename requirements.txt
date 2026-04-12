@@ -1,7 +1,9 @@
-customtkinter>=5.2.2
-pyobjc-framework-CoreWLAN>=10.3
-pyobjc-framework-CoreLocation>=10.3
-icmplib>=3.0.4
-matplotlib>=3.9
-Pillow>=10.0
-pytest>=8.0
+# NetScope — macOS only (CoreWLAN via PyObjC used by collectors)
+pyobjc-framework-CoreWLAN>=11.0,<12.0
+pyobjc-framework-CoreLocation>=11.0,<12.0
+icmplib>=3.0.4,<4.0
+# Web app
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+websockets>=12.0
+pywebview>=5.0

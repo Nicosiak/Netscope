@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 from typing import Any, Dict
+
+from collectors._subprocess import run_text
 
 
 def network_quality_available() -> bool:
@@ -19,12 +20,7 @@ def run_network_quality() -> Dict[str, Any]:
         return out
     stdout = ""
     try:
-        proc = subprocess.run(
-            ["networkQuality", "-c"],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
+        proc = run_text(["networkQuality", "-c"], timeout=120.0)
         stdout = (proc.stdout or "").strip()
         out["raw"] = stdout
         if stdout:
