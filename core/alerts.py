@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, List, Optional
 
+from analysis.thresholds import RSSI_MIN_FAIR, RSSI_MIN_GOOD
+
 # Hex color constants (inlined from former ui/theme.py — no Tk dependency)
 _COLOR_ALERT_OK       = "#22c55e"
 _COLOR_ALERT_WARNING  = "#f59e0b"
@@ -51,20 +53,23 @@ class AlertRule:
 
 
 DEFAULT_RULES: List[AlertRule] = [
+    # RSSI thresholds match analysis.thresholds.RSSI_MIN_FAIR / RSSI_MIN_GOOD
     AlertRule(
         "rssi",
         "<",
-        -80,
+        RSSI_MIN_FAIR,
         AlertLevel.CRITICAL,
         "Very weak RSSI (below about −80 dBm) — coverage or placement issue",
     ),
     AlertRule(
         "rssi",
         "<",
-        -70,
+        RSSI_MIN_GOOD,
         AlertLevel.WARNING,
         "RSSI below about −70 dBm — below a common UniFi/Ekahau-style stable target",
     ),
+    # Ping alert thresholds are intentionally less sensitive than classify_ping_ms
+    # (30/100 ms) — alerts fire on genuinely degraded connections, not mild slowness.
     AlertRule("ping_ms", ">", 150, AlertLevel.CRITICAL, "Very high latency — possible ISP issue"),
     AlertRule("ping_ms", ">", 80, AlertLevel.WARNING, "Elevated latency"),
     AlertRule("loss_pct", ">", 5, AlertLevel.CRITICAL, "High packet loss — unstable connection"),

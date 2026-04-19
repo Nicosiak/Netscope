@@ -1,11 +1,11 @@
-"""Continuous ping using icmplib (unprivileged on macOS)."""
+"""Legacy Tk-era ping entrypoint (PingSampler). Web app uses web/backend/ping_worker.py instead."""
 
 from __future__ import annotations
 
 import threading
 import time
 from collections import deque
-from typing import Callable, Deque, Dict, Optional, Sequence
+from typing import Callable, Deque, Dict, Optional
 
 from icmplib import ping
 

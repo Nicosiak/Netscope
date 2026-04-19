@@ -15,12 +15,8 @@ macOS WiFi signal analyzer and network diagnostics tool. PyWebView + FastAPI web
 - Channel congestion chart (2.4 GHz + 5 GHz)
 - Nearby networks table
 
-**Ping Tab**
-- Continuous ICMP ping (Google, Cloudflare, custom targets)
-- Live RTT chart with loss markers and packet log
-- Stats: current, min, avg, max, jitter, packet loss %
-
-**Diagnostics Tab**
+**Tools Tab**
+- Continuous ICMP ping (Google, Cloudflare, custom targets) — live RTT chart, loss markers, packet log, min/avg/max/jitter/loss%
 - DNS comparison: system DNS vs Google vs Cloudflare vs Quad9 with bar chart
 - Speed test via `networkQuality` (macOS 12+)
 - LAN throughput via `iperf3` (download + upload)

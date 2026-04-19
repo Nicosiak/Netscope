@@ -10,7 +10,7 @@ ignore = [
 ]
 
 [lint.isort]
-known-first-party = ["analysis", "collectors", "core"]
+known-first-party = ["analysis", "collectors", "core", "web"]
 
 [lint.per-file-ignores]
 "tests/*" = []
