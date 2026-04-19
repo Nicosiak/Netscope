@@ -9,8 +9,9 @@ macOS WiFi and network diagnostics **web app** (FastAPI + WebSocket + PyWebView)
 
 ## Structure
 
+- `.claude/skills/` — Claude Code CLI skills (`<name>/SKILL.md`). Not `.agents/` (ignored by Claude Code).
 - `collectors/` — Background data collection; plain dicts; daemon threads where used; subprocess timeouts.
-- `core/` — Storage, session, alerts, health bus, sanitization.
+- `core/` — Storage, session, alerts, sanitization.
 - `analysis/` — Thresholds, classification, recommendations (no UI).
 - `web/backend/` — FastAPI, WebSocket tick, payload build, ping worker.
 - `web/frontend/` — `index.html`, `app.js` — full UI; theme hex lives here (not Python).

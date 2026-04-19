@@ -13,6 +13,7 @@ macOS WiFi and network diagnostics **web app**. **Current release: v1.0.0** (see
 ## Folder structure
 
 ```
+.claude/skills/        → Claude Code CLI skills only (`<name>/SKILL.md`). Not `.agents/` — Claude Code ignores that path.
 collectors/            → Data acquisition — plain dicts, subprocess timeouts, daemon threads where used
 core/                  → Sanitization, SQLite session storage, alerts, session model
 analysis/              → Thresholds, classification, recommendations (no UI, no I/O)

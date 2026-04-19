@@ -10,6 +10,12 @@ Entry point: `web/main.py` → spawns uvicorn → opens PyWebView window (or pri
 
 **Run without long shell commands:** `make run` from repo root (uses `.venv`); `make stop` kills whatever is on port 8765. In Cursor/VS Code: **Terminal → Run Task… → NetScope: Run** (default build task), or **Run and Debug → NetScope (web/main.py)** for breakpoints.
 
+### Claude Code skills (not `.agents/`)
+
+Claude Code CLI loads skills only from **`~/.claude/skills/<name>/SKILL.md`** (all projects) or **this repo’s `.claude/skills/<name>/SKILL.md`** (project-only). It does **not** read `.agents/skills/`.
+
+This repo includes **`frontend-design`** under `.claude/skills/frontend-design/`. Invoke with **`/frontend-design`** in Claude Code. If you add a new top-level `~/.claude/skills` directory, restart the CLI once so it starts watching it.
+
 ---
 
 ## Exact file map
