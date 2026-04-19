@@ -99,6 +99,12 @@ function drawRssiBars() {
 
   ctx.clearRect(0, 0, w, h);
 
+  // Dot-grid overlay
+  ctx.fillStyle = "rgba(26,37,53,0.3)";
+  for (let gx = 0; gx < cW; gx += 24)
+    for (let gy = PAD_T; gy < PAD_T + cH; gy += 24)
+      ctx.fillRect(gx, gy, 1, 1);
+
   // ── Grid ──────────────────────────────────────────────────────
   const tickStep  = range <= 15 ? 2 : range <= 30 ? 5 : 10;
   const firstTick = Math.ceil(scaleMin / tickStep) * tickStep;
@@ -120,6 +126,17 @@ function drawRssiBars() {
   for (const f of [0.25, 0.5, 0.75]) {
     const x = f * cW;
     ctx.beginPath(); ctx.moveTo(x, PAD_T); ctx.lineTo(x, PAD_T + cH); ctx.stroke();
+  }
+
+  // Reference line at −70 dBm (good/fair threshold)
+  const refY = yOf(-70);
+  if (refY > PAD_T && refY < PAD_T + cH) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(34,197,94,0.2)";
+    ctx.setLineDash([4, 6]);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, refY); ctx.lineTo(cW, refY); ctx.stroke();
+    ctx.restore();
   }
 
   // "dBm" unit label
@@ -169,7 +186,7 @@ function drawRssiBars() {
   // Line pass
   ctx.save();
   ctx.lineWidth = 1.5; ctx.lineJoin = "round"; ctx.lineCap = "round";
-  ctx.strokeStyle = lc; ctx.shadowColor = lc; ctx.shadowBlur = 3;
+  ctx.strokeStyle = lc; ctx.shadowColor = lc; ctx.shadowBlur = 6;
   seg = [];
   for (const p of pts) { if (p) seg.push(p); else { drawSegment(seg, "line"); seg = []; } }
   drawSegment(seg, "line");
@@ -177,8 +194,8 @@ function drawRssiBars() {
   // Dot on latest point
   const last = pts[N - 1];
   if (last) {
-    ctx.shadowBlur = 8; ctx.fillStyle = lc;
-    ctx.beginPath(); ctx.arc(last.x, last.y, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 12; ctx.fillStyle = lc;
+    ctx.beginPath(); ctx.arc(last.x, last.y, 4, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
 
@@ -279,3 +296,5 @@ function updateSignalTab(d) {
 
 // Kick off RSSI canvas loop (stops automatically when another tab is active)
 window.__netscopeStartRssiLoop();
+
+document.addEventListener("ws:data", e => updateSignalTab(e.detail));

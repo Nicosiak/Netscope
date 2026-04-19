@@ -15,7 +15,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-from collectors._subprocess import run_merged_safe
+from core.subproc import run_merged_safe
 
 
 def _ensure_validate_environment() -> None:

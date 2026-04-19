@@ -98,7 +98,7 @@ def test_stats_mixed_loss() -> None:
 
 
 def test_web_ping_stats_matches_collector() -> None:
-    """web/backend/ping_stats must produce identical output to collectors/ping_collector."""
+    """Both re-export from collectors.ping_stats — guaranteed identical, verified here."""
     cases = [
         [],
         [None, None],

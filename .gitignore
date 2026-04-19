@@ -1,19 +1,34 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .eggs/
+*.egg
 dist/
 build/
 .venv/
 venv/
 .env
+.env.local
+
+# Claude Code — machine-specific overrides only (commit `.claude/settings.json`)
+.claude/settings.local.json
+
+# OS / editors
 .DS_Store
 .idea/
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# VS Code / Cursor — keep shared tasks & launch; ignore local settings
 .vscode/*
 !.vscode/tasks.json
 !.vscode/launch.json
 
 # Test / coverage / property testing caches
+.cache/
 .coverage
 .coverage.*
 htmlcov/
@@ -21,8 +36,13 @@ htmlcov/
 .pytest_cache/
 coverage.xml
 
+# Linters / type checkers (see scripts/clean_caches.sh)
+.ruff_cache/
+.mypy_cache/
+
 # Optional local scratch / reports
 report.txt
+*.log
 
 # Vendored frontend assets (downloaded by setup_venv.sh, not committed)
 web/frontend/vendor/

@@ -207,57 +207,68 @@ def build() -> Dict[str, Any]:
         "session_id": session_state.get(),
     }
 
-    if session_state.get() is not None:
-        from core.storage import storage as _storage
-
-        # Shared helper: build a snapshot dict with stable (rolling-average) alerts.
-        # The live alert uses instantaneous rtt for UI responsiveness; snapshot alerts
-        # use avg_ms + rssi_avg10 so a single-probe spike doesn't create a false-positive
-        # warning row in the session review.
-        def _make_snap_fields(kind: str) -> Dict[str, Any]:
-            snap_rssi = avg10 if avg10 is not None else (
-                float(rssi_dbm) if isinstance(rssi_dbm, int) else None
-            )
-            snap_alert = alert_engine.evaluate(
-                rssi=snap_rssi,
-                ping_ms=float(data["avg_ms"]) if data.get("avg_ms") is not None else None,
-                loss_pct=float(stats.get("loss_pct") or 0.0),
-            )
-            fields: Dict[str, Any] = {k: data[k] for k in (
-                "signal", "snr", "rssi_avg10", "rssi_stddev20",
-                "phy_speed", "ping", "avg_ms", "p95_ms", "loss",
-                "jitter_ms", "spike", "baseline_ms",
-                "ap_name", "bssid", "channel", "band", "phy_mode",
-            ) if k in data}
-            fields["alerts"] = {
-                "level": snap_alert.level.value,
-                "messages": snap_alert.messages,
-            }
-            if kind == "spike":
-                fields["spike_rtt_ms"] = _r1(rtt)
-            return fields
-
-        # ── Stability snapshot: every 5 s during anomalies, 15 s when clean ──
-        # Tighter cadence during degraded conditions catches short transients.
-        snap_interval = 5.0 if alert_state.level.value != "ok" else 15.0
-        if session_state.should_snapshot(interval=snap_interval):
-            _storage.save_snapshot(
-                session_state.get(),  # type: ignore[arg-type]
-                "stability",
-                _make_snap_fields("stability"),
-            )
-            session_state.mark_snapshot()
-
-        # ── Spike event snapshot: immediate write when a spike fires ──
-        # Captured independently of the stability cadence so a spike that lands
-        # between two 15 s windows is never silently dropped. Throttled to once
-        # per 5 s so a sustained spike doesn't flood the table.
-        if spike and session_state.should_event_snapshot():
-            _storage.save_snapshot(
-                session_state.get(),  # type: ignore[arg-type]
-                "spike",
-                _make_snap_fields("spike"),
-            )
-            session_state.mark_event_snapshot()
+    _log_snapshot(data, stats, rtt, avg10, rssi_dbm, alert_state, spike)
 
     return data
+
+
+def _log_snapshot(
+    data: Dict[str, Any],
+    stats: Dict[str, Any],
+    rtt: Optional[float],
+    avg10: Optional[float],
+    rssi_dbm: Optional[int],
+    alert_state: Any,
+    spike: bool,
+) -> None:
+    """Write stability / spike snapshots to storage when a session is active.
+
+    Uses rssi_avg10 + avg_ms for snapshot alerts (not instantaneous rtt) so a
+    single-probe spike doesn't create a false-positive warning row in the review.
+    The live banner uses instantaneous rtt for real-time responsiveness.
+    """
+    if session_state.get() is None:
+        return
+
+    from core.alerts import alert_engine
+    from core.storage import storage as _storage
+
+    def _make_snap_fields(kind: str) -> Dict[str, Any]:
+        snap_rssi = avg10 if avg10 is not None else (
+            float(rssi_dbm) if isinstance(rssi_dbm, int) else None
+        )
+        snap_alert = alert_engine.evaluate(
+            rssi=snap_rssi,
+            ping_ms=float(data["avg_ms"]) if data.get("avg_ms") is not None else None,
+            loss_pct=float(stats.get("loss_pct") or 0.0),
+        )
+        fields: Dict[str, Any] = {k: data[k] for k in (
+            "signal", "snr", "rssi_avg10", "rssi_stddev20",
+            "phy_speed", "ping", "avg_ms", "p95_ms", "loss",
+            "jitter_ms", "spike", "baseline_ms",
+            "ap_name", "bssid", "channel", "band", "phy_mode",
+        ) if k in data}
+        fields["alerts"] = {
+            "level": snap_alert.level.value,
+            "messages": snap_alert.messages,
+        }
+        if kind == "spike":
+            fields["spike_rtt_ms"] = _r1(rtt)
+        return fields
+
+    snap_interval = 5.0 if alert_state.level.value != "ok" else 15.0
+    if session_state.should_snapshot(interval=snap_interval):
+        _storage.save_snapshot(
+            session_state.get(),  # type: ignore[arg-type]
+            "stability",
+            _make_snap_fields("stability"),
+        )
+        session_state.mark_snapshot()
+
+    if spike and session_state.should_event_snapshot():
+        _storage.save_snapshot(
+            session_state.get(),  # type: ignore[arg-type]
+            "spike",
+            _make_snap_fields("spike"),
+        )
+        session_state.mark_event_snapshot()

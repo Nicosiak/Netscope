@@ -1,6 +1,6 @@
 # NetScope — architecture & security
 
-**Release:** v1.0.0 (`VERSION` at repo root, `CHANGELOG.md`). **Setup:** [README.md](../README.md) · **Path inventory:** [INVENTORY.md](INVENTORY.md) · **Agent rules:** [AGENTS.md](../AGENTS.md) · **Claude Code map:** [CLAUDE.md](../CLAUDE.md) · **Deep dive (diagrams):** [PROJECT_DEEP_DIVE.md](PROJECT_DEEP_DIVE.md)
+**Release:** see repo root [`VERSION`](../VERSION) (avoid hardcoding the number here); history via `git log` / tags. **Setup:** [README.md](../README.md) · **Path inventory:** [INVENTORY.md](INVENTORY.md) · **Backlog:** [BACKLOG.md](BACKLOG.md) · **Agent rules:** [AGENTS.md](../AGENTS.md) · **Claude Code map:** [CLAUDE.md](../CLAUDE.md) · **Deep dive (diagrams):** [PROJECT_DEEP_DIVE.md](PROJECT_DEEP_DIVE.md)
 
 ---
 
@@ -26,7 +26,7 @@ macOS-only **local web app**: FastAPI + WebSocket on `127.0.0.1`, UI in `web/fro
 | `web/backend/ping_worker.py` | ~1 Hz ICMP thread → `state.ping`. |
 | `web/backend/ping_stats.py` | Re-exports `collectors/ping_stats.stats_from_rtt_history` so `payload` avoids importing `icmplib` at load. |
 | `web/frontend/` | SPA: `index.html`, modular `*.js` (e.g. `signal.js`, `ws.js`, `tools.js`), theme hex in HTML/JS only. |
-| `.claude/skills/` | Claude Code project skills (e.g. `frontend-design`). |
+| `.claude/skills/` | Optional Claude Code project skills (`<name>/SKILL.md`); empty unless added. |
 | `web/main.py` | Spawns uvicorn, opens PyWebView. |
 | `tests/` | pytest + optional `validate_all.py` on real macOS. |
 

@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from typing import Any, Callable, Dict, Optional
 
-from core.host_sanitize import normalize_diagnostic_host
+from core.sanitize import normalize_diagnostic_host
 
 _MAX_CAPTURE_CHARS = 2_000_000
 

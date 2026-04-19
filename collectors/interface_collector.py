@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional
 
-from collectors._subprocess import run_merged_safe
+from core.subproc import run_merged_safe
 
 
 def _run(args: List[str], timeout: float = 10.0) -> str:

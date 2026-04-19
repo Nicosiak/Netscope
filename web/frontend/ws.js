@@ -40,11 +40,6 @@ function scheduleReconnect() {
 
 function onData(d) {
   window.__netscopeLastWs = d;
-  updateSignalTab(d);                                              // signal.js
-  if (typeof updatePingModule === "function") updatePingModule(d); // ping.js
-  const newCh = d.channel ? parseInt(d.channel, 10) : null;
-  if (newCh !== lastConnChannel) lastConnChannel = newCh;         // scan.js global
-  if (d.ap_name) lastApName = d.ap_name;                         // scan.js global
   lastPayloadTs = d.ts ? d.ts * 1000 : Date.now();
-  if (window.nsSession) window.nsSession.onPayload(d);           // session.js
+  document.dispatchEvent(new CustomEvent("ws:data", { detail: d }));
 }

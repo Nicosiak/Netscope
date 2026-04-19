@@ -33,6 +33,7 @@ Thumbs.db
 !.vscode/launch.json
 
 # ── Test / coverage / type / lint caches ────────────────────────
+.cache/
 .coverage
 .coverage.*
 htmlcov/

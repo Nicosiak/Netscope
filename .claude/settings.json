@@ -6,7 +6,9 @@
       "Write(*)",
       "Read(*)",
       "Glob(*)",
-      "Grep(*)"
+      "Grep(*)",
+      "WebFetch(*)",
+      "WebSearch"
     ]
   }
 }

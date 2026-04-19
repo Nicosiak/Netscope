@@ -2,11 +2,20 @@
 
 This document explains **how NetScope is put together**: processes, threads, network paths, and how data moves from macOS and Python to your screen. Use it as **context for an AI assistant** (paste whole-file or sections) when exploring behaviour, debugging, or extending the app.
 
-For a shorter map and security notes, see [OVERVIEW.md](OVERVIEW.md). For setup and features, see [README.md](../README.md).
+For a shorter map and security notes, see [OVERVIEW.md](OVERVIEW.md). For setup and features, see [README.md](../README.md). For internal follow-ups, see [BACKLOG.md](BACKLOG.md).
 
 **Visuals** below use [Mermaid](https://mermaid.js.org/) diagrams. They render on GitHub, in GitLab, in many IDEs (including VS Code / Cursor with a Mermaid preview), and on [mermaid.live](https://mermaid.live) if you paste the fenced blocks.
 
-**Version:** see repo root `VERSION` (currently aligned with this doc when both are maintained together).
+**Version:** see repo root `VERSION`.
+
+### TL;DR (load this section first)
+
+- **Entry:** `web/main.py` starts **uvicorn** with `web.backend.server:app` on **`127.0.0.1:8765`** (PyWebView or browser).
+- **Live UI data:** **`payload.build()`** (~250 ms tick) merges Wi‑Fi/cache, **ping** snapshot, **alerts**, optional **session** logging → one JSON object → **WebSocket `/ws`** → `ws.js` → tab scripts.
+- **Ping:** **`web/backend/ping_worker.py`** (~1 Hz) writes **`PingState`**; **`payload`** reads consistent snapshots under lock.
+- **Wi‑Fi / tools:** **collectors** (CoreWLAN, CLI tools) produce dicts; on-demand work via **`web/backend/routes/`**.
+- **Sessions:** **`core/storage.py`** — SQLite under **`~/.netscope/`** when a customer session is active.
+- **Below:** full narrative, threading detail, and Mermaid diagrams.
 
 ---
 

@@ -7,11 +7,11 @@ alwaysApply: true
 
 macOS WiFi and network diagnostics **web app** (FastAPI + WebSocket + PyWebView). Python 3.12+ recommended (3.11+). CoreWLAN via PyObjC. Local only.
 
-**Full tree + APIs:** [CLAUDE.md](../../CLAUDE.md) · **Path purposes:** [docs/INVENTORY.md](../../docs/INVENTORY.md)
+**Shallow index (paths → one line):** [docs/INVENTORY.md](../../docs/INVENTORY.md) · **Full tree + APIs:** [CLAUDE.md](../../CLAUDE.md) · **Deferred work:** [docs/BACKLOG.md](../../docs/BACKLOG.md)
 
 ## Structure (short)
 
-- `.claude/skills/` — Claude Code skills (`<name>/SKILL.md`). Not `.agents/`.
+- `.claude/skills/` — Optional Claude Code skills (`<name>/SKILL.md`). Not `.agents/`.
 - `collectors/` — CoreWLAN + CLI tools; dicts; timeouts; `ping_stats` = canonical RTT stats.
 - `core/` — Sanitize (incl. `normalize_diagnostic_host`), `subproc`, storage, alerts, sessions.
 - `analysis/` — Thresholds + recommendations (no I/O).

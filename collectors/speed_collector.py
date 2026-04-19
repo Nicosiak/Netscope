@@ -6,7 +6,7 @@ import json
 import shutil
 from typing import Any, Dict, Optional
 
-from collectors._subprocess import run_text
+from core.subproc import run_text
 
 _MAX_RUNTIME_CLAMP = (20, 90)
 

@@ -1,7 +1,7 @@
 """Optional ``nmap`` subprocess — bounded presets (TCP/UDP, discovery, TLS scripts).
 
 Presets append only fixed argv tokens; the target is a single normalized host
-from :func:`core.host_sanitize.normalize_diagnostic_host`. XML on stdout is parsed
+from :func:`core.sanitize.normalize_diagnostic_host`. XML on stdout is parsed
 for a small open-port summary; stderr is returned as ``raw`` for the live log.
 """
 
@@ -14,7 +14,7 @@ import time
 import xml.etree.ElementTree as ET
 from typing import Any, Dict, List, Optional, Tuple
 
-from collectors._subprocess import run_text
+from core.subproc import run_text
 
 # (extra argv after ``nmap``, timeout seconds) — ``-oX -`` and host appended in run_nmap.
 _PRESETS: Dict[str, Tuple[List[str], float]] = {

@@ -145,3 +145,10 @@ scanBtn.addEventListener("click", runScan);
 setTimeout(runScan, 1500);
 // Re-scan every 60 seconds automatically
 setInterval(runScan, 60_000);
+
+document.addEventListener("ws:data", e => {
+  const d = e.detail;
+  const newCh = d.channel ? parseInt(d.channel, 10) : null;
+  if (newCh !== lastConnChannel) lastConnChannel = newCh;
+  if (d.ap_name) lastApName = d.ap_name;
+});

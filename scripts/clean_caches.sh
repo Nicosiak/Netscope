@@ -13,7 +13,8 @@ rm_rf() {
   fi
 }
 
-# Python / tests
+# Python / tests — unified `.cache/` (pytest, ruff, hypothesis) + legacy paths
+rm_rf ".cache"
 rm_rf ".pytest_cache"
 rm_rf ".hypothesis"
 rm_rf ".ruff_cache"

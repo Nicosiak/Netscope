@@ -457,4 +457,6 @@ function _esc(s) {
 // Exposed for inline event handlers
 window.nsSession._closeModal = closeModal;
 
+document.addEventListener("ws:data", e => onPayload(e.detail));
+
 })();

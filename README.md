@@ -1,8 +1,8 @@
 # NetScope
 
-**Version 1.0 (v1.0.0)** — canonical version in the repo root [`VERSION`](VERSION) file; see [`CHANGELOG.md`](CHANGELOG.md).
+**Version:** see repo root [`VERSION`](VERSION). **History:** `git log` and tags.
 
-**This file:** user-facing overview, setup, run, and testing. **Agents / coding rules:** [AGENTS.md](AGENTS.md). **Architecture & security:** [docs/OVERVIEW.md](docs/OVERVIEW.md). **In-depth (diagrams, data flow):** [docs/PROJECT_DEEP_DIVE.md](docs/PROJECT_DEEP_DIVE.md).
+**This file:** user-facing overview, setup, run, and testing. **Agent / editor rules:** [AGENTS.md](AGENTS.md). **Short path index (good first open for AI):** [docs/INVENTORY.md](docs/INVENTORY.md). **Full file map (Claude Code):** [CLAUDE.md](CLAUDE.md). **Architecture & security:** [docs/OVERVIEW.md](docs/OVERVIEW.md). **In-depth (diagrams, data flow):** [docs/PROJECT_DEEP_DIVE.md](docs/PROJECT_DEEP_DIVE.md). **Internal backlog:** [docs/BACKLOG.md](docs/BACKLOG.md).
 
 macOS WiFi signal analyzer and network diagnostics tool. PyWebView + FastAPI web UI. Dark-themed, inspired by Ubiquiti WiFiman.
 
@@ -30,6 +30,9 @@ macOS WiFi signal analyzer and network diagnostics tool. PyWebView + FastAPI web
 **Info Tab**
 - Public IP, gateway, DNS servers, Wi-Fi identity, addressing details
 
+**Security Tab**
+- Optional **`nmap`**-based presets (local scans only; bounded CLI — see collectors / backend routes)
+
 ## Requirements
 
 - macOS 12+ with **Python 3.12 or 3.13** recommended (3.11+ supported)
@@ -52,12 +55,26 @@ For development (pytest, coverage), also: `pip install -r requirements-dev.txt`.
 
 ## Run
 
+From repo root (after **Setup**), simplest:
+
+```bash
+make run
+```
+
+Uses `.venv` via `scripts/run_app.sh`. Stop the app or free port **8765**:
+
+```bash
+make stop
+```
+
+Manual equivalent:
+
 ```bash
 source .venv/bin/activate
 python web/main.py
 ```
 
-Opens a native PyWebView window at `http://127.0.0.1:8765`. If pywebview is not installed, open that URL in your browser and press Ctrl-C to stop.
+Opens a native PyWebView window at `http://127.0.0.1:8765`. If pywebview is not installed, open that URL in your browser and stop the server from the terminal (**Ctrl+C**).
 
 ## Test (local quality loop)
 

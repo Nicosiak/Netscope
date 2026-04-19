@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full local test pass: fast unit + Hypothesis + integration (macOS).
+# Local pytest pass: unit + property tests under tests/ (add validate_all.py separately if needed).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

@@ -1,7 +1,9 @@
-"""Data sanitization — validates collector output before it hits the UI."""
+"""Data sanitization and host validation — validates collector output before it hits the UI."""
 
 from __future__ import annotations
 
+import ipaddress
+import re
 import time
 from typing import Any, Dict, Optional
 
@@ -78,3 +80,54 @@ def sanitize_ping(payload: Dict[str, Any]) -> Dict[str, Any]:
     cleaned["_valid"] = True
     cleaned["_stale"] = stale
     return cleaned
+
+
+# ── Host validation (merged from core.host_sanitize) ─────────────────────────
+
+_MAX_HOST_LEN = 253
+_BAD_CHARS = frozenset(' \n\r\t;|&$`<>()[]{}"\\')
+
+
+def normalize_diagnostic_host(raw: str) -> Optional[str]:
+    """Return a normalized host/IP safe to pass as a single argv token, or ``None``.
+
+    Accepts IPv4, IPv6 (with or without brackets), and simple hostnames
+    (letters, digits, hyphen, dots between labels).
+    """
+    if not raw:
+        return None
+    s = raw.strip()
+    if not s or len(s) > _MAX_HOST_LEN:
+        return None
+
+    if s.startswith("[") and s.endswith("]"):
+        inner = s[1:-1]
+        try:
+            ipaddress.IPv6Address(inner)
+            return s
+        except ValueError:
+            return None
+
+    if any(c in s for c in _BAD_CHARS):
+        return None
+
+    if ":" in s:
+        try:
+            ipaddress.IPv6Address(s)
+            return s
+        except ValueError:
+            return None
+
+    try:
+        ipaddress.IPv4Address(s)
+        return s
+    except ValueError:
+        pass
+
+    if s.startswith(".") or s.endswith(".") or ".." in s:
+        return None
+
+    _LABEL = r"(?!-)[a-zA-Z0-9-]{1,63}"
+    if not re.fullmatch(rf"{_LABEL}(\.{_LABEL})*", s):
+        return None
+    return s

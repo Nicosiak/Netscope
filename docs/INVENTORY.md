@@ -1,6 +1,8 @@
 # NetScope — path inventory (purpose only)
 
-Thin orientation table: **what each area is for**, not line-by-line code. **Canonical file map and APIs:** [CLAUDE.md](../CLAUDE.md). **Security / threat model:** [OVERVIEW.md](OVERVIEW.md). **Diagrams and flows:** [PROJECT_DEEP_DIVE.md](PROJECT_DEEP_DIVE.md).
+**Use this doc as:** a **short** path → purpose table (low token cost for agents). **Use [CLAUDE.md](../CLAUDE.md) for:** the **full** file tree and APIs. **Security / threat model:** [OVERVIEW.md](OVERVIEW.md). **Diagrams / deep behavior:** [PROJECT_DEEP_DIVE.md](PROJECT_DEEP_DIVE.md). **Deferred work:** [BACKLOG.md](BACKLOG.md).
+
+Thin orientation table: **what each area is for**, not line-by-line code.
 
 | Path | Layer | Purpose (one line) | Detail |
 |------|--------|-------------------|--------|
@@ -10,12 +12,11 @@ Thin orientation table: **what each area is for**, not line-by-line code. **Cano
 | `requirements-dev.txt` | dev | pytest, ruff, hypothesis, bandit | CI |
 | `pytest.ini` | dev | test discovery + `pythonpath` | — |
 | `ruff.toml` | dev | linter config | — |
-| `skills-lock.json` | optional | Records marketplace hash for `frontend-design` from `anthropics/claude-code`; **instructions you run** live in [`.claude/skills/frontend-design/SKILL.md`](../.claude/skills/frontend-design/SKILL.md). Safe to delete if you only use the vendored skill. | [CLAUDE.md](../CLAUDE.md) skills |
 | `.gitignore` | VCS | What never gets committed | pair with `.claudeignore` |
 | `.claudeignore` | Claude Code | What the CLI should not index (noise + secrets) | header comment |
-| `.claude/settings.json` | Claude Code | Repo-shared permission defaults | — |
-| `.claude/settings.local.json` | local | Machine-specific allows (not indexed; gitignore-style) | `.claudeignore` |
-| `.claude/skills/` | Claude Code | Project skills (`/skill-name`); canonical `frontend-design` here | [CLAUDE.md](../CLAUDE.md) |
+| `.claude/settings.json` | Claude Code | Repo-shared permission defaults (`permissions.allow`) | — |
+| `.claude/settings.local.json` | local | Optional machine-specific overrides; **gitignored** — recreate locally if needed | `.gitignore` |
+| `.claude/skills/` | Claude Code | Optional project skills (`<name>/SKILL.md`); empty unless you add one | [CLAUDE.md](../CLAUDE.md) |
 | `.cursor/rules/*.mdc` | Cursor | Short always-on hints; avoid duplicating CLAUDE | rules files |
 | `.github/workflows/` | CI | pytest, ruff, compileall, bandit | `tests.yml` |
 | `.vscode/` | IDE | Shared tasks + launch for NetScope | `tasks.json` |
@@ -41,6 +42,6 @@ Thin orientation table: **what each area is for**, not line-by-line code. **Cano
 | `web/frontend/` | UI | SPA: `index.html`, modular `*.js`, `vendor/` Chart.js (often gitignored) | [CLAUDE.md](../CLAUDE.md) |
 | `tests/` | QA | pytest + fixtures; `validate_all.py` optional live Mac | — |
 | `scripts/` | dev | venv setup, run app, clean caches, test runner | — |
-| `docs/` | doc | OVERVIEW, DEEP_DIVE, this file | — |
+| `docs/` | doc | OVERVIEW, DEEP_DIVE, [BACKLOG](BACKLOG.md), this file | — |
 
-**Generated / install-only (do not treat as “features”):** `.venv/`, `__pycache__/`, `.pytest_cache/`, `.hypothesis/`, `web/frontend/vendor/` — see `.gitignore` and [scripts/clean_caches.sh](../scripts/clean_caches.sh).
+**Generated / install-only (do not treat as “features”):** `.venv/`, `__pycache__/`, `.cache/` (pytest/ruff/hypothesis), legacy `.pytest_cache/` / `.ruff_cache/` / `.hypothesis/` if present, `web/frontend/vendor/` — see `.gitignore` and [scripts/clean_caches.sh](../scripts/clean_caches.sh).

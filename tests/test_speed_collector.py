@@ -87,6 +87,36 @@ def test_extract_metrics_not_ok() -> None:
     assert m["interface_name"] is None
 
 
+def test_extract_metrics_string_throughput_ignored() -> None:
+    m = sc.extract_metrics({"ok": True, "json": {"dl_throughput": "fast", "ul_throughput": None}})
+    assert m["dl_mbps"] is None
+    assert m["ul_mbps"] is None
+
+
+def test_extract_metrics_empty_interface_is_none() -> None:
+    m = sc.extract_metrics({"ok": True, "json": {"interface_name": "   "}})
+    assert m["interface_name"] is None
+
+
+def test_extract_metrics_json_not_dict_returns_all_none() -> None:
+    m = sc.extract_metrics({"ok": True, "json": "not a dict"})
+    assert all(v is None for v in m.values())
+
+
+def test_extract_metrics_missing_ok_returns_all_none() -> None:
+    m = sc.extract_metrics({"json": {"dl_throughput": 100_000_000}})
+    assert m["dl_mbps"] is None
+
+
+def test_clamp_max_runtime_boundaries() -> None:
+    from collectors.speed_collector import _clamp_max_runtime
+    assert _clamp_max_runtime(5) == 20
+    assert _clamp_max_runtime(200) == 90
+    assert _clamp_max_runtime(20) == 20
+    assert _clamp_max_runtime(90) == 90
+    assert _clamp_max_runtime(45) == 45
+
+
 def test_run_network_quality_appends_M_and_clamps(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: List[Any] = []
 

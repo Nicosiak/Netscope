@@ -9,8 +9,8 @@ import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from typing import Any, Dict, List, Optional, Tuple
 
-from collectors._subprocess import merged_output, run_text
-from core.host_sanitize import normalize_diagnostic_host
+from core.subproc import merged_output, run_text
+from core.sanitize import normalize_diagnostic_host
 
 _HOP_PREFIX = re.compile(r"^(\d+)\s+(.*)$")
 # Strip trailing RTT tokens (digits or "<1 ms" style) before parsing host field.

@@ -44,4 +44,3 @@ python -m py_compile <changed_file.py>
 ## Known warnings
 
 - SSID/BSSID returning None is expected without Location Services — test treats this as WARN not FAIL
-- matplotlib tight_layout warnings are suppressed in theme.py

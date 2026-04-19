@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 import threading
 import time
 from collections import deque
@@ -10,53 +9,8 @@ from typing import Callable, Deque, Dict, Optional, Sequence
 
 from icmplib import ping
 
-from core.host_sanitize import normalize_diagnostic_host
-
-
-def stats_from_rtt_history(history: Sequence[Optional[float]]) -> Dict[str, Optional[float]]:
-    """Professional-grade RTT statistics from a rolling history of RTT samples and None (loss).
-
-    Mirrors web/backend/ping_stats.py exactly — keep both in sync.
-    """
-    from typing import List
-    valid: List[float] = [x for x in history if x is not None]
-    total = len(history)
-    received = len(valid)
-    loss_pct = 100.0 * (total - received) / total if total else 0.0
-
-    if not valid:
-        return {
-            "min_ms": None, "avg_ms": None, "p50_ms": None,
-            "p95_ms": None, "max_ms": None,
-            "jitter_ms": None, "loss_pct": loss_pct,
-        }
-
-    sv = sorted(valid)
-    n  = len(sv)
-    p50 = sv[n // 2] if n % 2 else (sv[n // 2 - 1] + sv[n // 2]) / 2.0
-    p95 = sv[min(math.ceil(0.95 * n) - 1, n - 1)]
-
-    diffs: List[float] = []
-    prev: Optional[float] = None
-    for v in history:
-        if v is not None:
-            if prev is not None:
-                diffs.append(abs(v - prev))
-            prev = v
-        else:
-            prev = None
-
-    jitter: Optional[float] = round(sum(diffs) / len(diffs), 3) if diffs else None
-
-    return {
-        "min_ms":    round(min(valid), 3),
-        "avg_ms":    round(sum(valid) / n, 3),
-        "p50_ms":    round(p50, 3),
-        "p95_ms":    round(p95, 3),
-        "max_ms":    round(max(valid), 3),
-        "jitter_ms": jitter,
-        "loss_pct":  loss_pct,
-    }
+from collectors.ping_stats import stats_from_rtt_history
+from core.sanitize import normalize_diagnostic_host
 
 
 class PingSampler:

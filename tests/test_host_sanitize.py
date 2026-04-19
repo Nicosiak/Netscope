@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from core.host_sanitize import normalize_diagnostic_host
+from core.sanitize import normalize_diagnostic_host
 
 
 @pytest.mark.parametrize(

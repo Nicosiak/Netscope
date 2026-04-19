@@ -421,6 +421,9 @@
       asn.style.color = st.asnFg;
       if (String(st.asnFg).startsWith("#")) asn.style.borderColor = st.asnFg + "22";
       else asn.style.border = "1px solid var(--border)";
+      if (String(st.asnFg).startsWith("#")) {
+        asn.style.boxShadow = "inset 0 0 0 1px " + st.asnFg + "33";
+      }
       asn.textContent = String(hop.asn || "—") + " · " + String(hop.org || "Unknown");
       hostCol.appendChild(asn);
 

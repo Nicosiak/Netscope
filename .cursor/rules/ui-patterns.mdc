@@ -6,7 +6,6 @@ alwaysApply: false
 
 # Web UI patterns
 
-- **Theme:** single palette in `web/frontend/index.html` and `app.js` — do not reference deleted `ui/theme.py`.
-- **Background** `#0a0c0f`, **surface** `#0d1117`, **borders** `#1a2030`; signal greens/ambers/reds per AGENTS.md.
+- **Theme:** CSS variables in `web/frontend/index.html` `:root` (e.g. `--bg-page`, `--bg-card`, `--border`, `--sky` / `--green` / `--amber` / `--red`) plus any overrides in `app.js` — do not reference deleted `ui/theme.py` (colors are inlined in Python only where noted in `core/alerts.py` / `analysis/thresholds.py`).
 - **Threading:** only the FastAPI/WebSocket thread mutates shared backend state; frontend is event-driven DOM updates.
 - **Charts:** RSSI — canvas + `requestAnimationFrame`; ping — Chart.js with `animation: false`.

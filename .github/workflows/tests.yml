@@ -24,6 +24,6 @@ jobs:
       - name: Compile (syntax check)
         run: python -m compileall -q web tests collectors core analysis
       - name: Bandit (security lint)
-        run: bandit -r collectors core -ll
+        run: bandit -r collectors core web -ll
       - name: Run pytest
         run: python -m pytest tests/ -q

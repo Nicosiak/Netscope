@@ -5,6 +5,7 @@
       "name": "NetScope (web/main.py)",
       "type": "python",
       "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
       "program": "${workspaceFolder}/web/main.py",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",

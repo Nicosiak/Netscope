@@ -1,19 +1,19 @@
 # NetScope — Agent Guidelines
 
-**Path inventory:** docs/INVENTORY.md · **User overview:** README.md · **Architecture & security:** docs/OVERVIEW.md · **Claude Code (full map):** CLAUDE.md · **Deep dive (diagrams):** docs/PROJECT_DEEP_DIVE.md
+**Short index:** docs/INVENTORY.md · **User overview:** README.md · **Architecture & security:** docs/OVERVIEW.md · **Full map (Claude Code):** CLAUDE.md · **Deep dive (diagrams):** docs/PROJECT_DEEP_DIVE.md · **Backlog:** docs/BACKLOG.md
 
 ---
 
 ## Project
 
-macOS WiFi and network diagnostics **web app**. **Current release: v1.0.0** (see repo root `VERSION` and `CHANGELOG.md`). Python 3.11+ · CoreWLAN (PyObjC) · FastAPI + WebSocket · PyWebView. **Local only:** binds to `127.0.0.1`, no remote service. **SQLite** under `~/.netscope/` is used only for optional **session snapshots** on this machine — not a shared or cloud database.
+macOS WiFi and network diagnostics **web app**. **Release:** repo root `VERSION` (do not hardcode version strings in agent-facing docs); history via `git log` / tags. Python 3.11+ · CoreWLAN (PyObjC) · FastAPI + WebSocket · PyWebView. **Local only:** binds to `127.0.0.1`, no remote service. **SQLite** under `~/.netscope/` is used only for optional **session snapshots** on this machine — not a shared or cloud database.
 
 ---
 
 ## Folder structure
 
 ```
-.claude/skills/        → Claude Code CLI skills (`<name>/SKILL.md`). Not `.agents/` — Claude Code ignores that path.
+.claude/skills/        → Optional Claude Code skills (`<name>/SKILL.md`). Not `.agents/` — Claude Code ignores that path.
 collectors/            → Data acquisition — plain dicts, subprocess timeouts; includes ping_stats (canonical RTT stats)
 core/                  → Sanitize (incl. host validation), subproc helpers, SQLite sessions, alerts, session model
 analysis/              → Thresholds, classification, recommendations (no UI, no I/O)
@@ -27,7 +27,7 @@ web/
   main.py              → Starts uvicorn; opens PyWebView (or print URL for browser-only)
 tests/                 → pytest; `tests/validate_all.py` = optional live macOS CLI cross-check
 scripts/               → venv setup, test runner, cache clean — change only for broken paths or when asked
-docs/                  → INVENTORY.md, OVERVIEW.md, PROJECT_DEEP_DIVE.md
+docs/                  → INVENTORY.md, OVERVIEW.md, PROJECT_DEEP_DIVE.md, BACKLOG.md
 ```
 
 **Detailed file map and API table:** [CLAUDE.md](CLAUDE.md).
@@ -45,12 +45,9 @@ docs/                  → INVENTORY.md, OVERVIEW.md, PROJECT_DEEP_DIVE.md
 
 ## UI design (web)
 
-- Background `#0a0c0f` · Surface `#0d1117` · Borders `#1a2030` · Font: JetBrains Mono
-- Signal colors: green `#22c55e` ≥ -70 · amber `#f59e0b` -70 to -80 · red `#ef4444` ≤ -80
-- Metric strip: Signal, SNR, PHY Speed, Ping, Packet Loss — bold values
-- RSSI chart: canvas line, 250 ms updates from WebSocket
-- Status bar: connection dot · AP name · channel · PHY mode · width
-- Side panel ~260px: AP name/BSSID · signal/SNR bars · latency/loss
+- **Theme:** CSS variables in `web/frontend/index.html` `:root` (`--bg-page`, `--bg-card`, `--border`, `--sky` / `--green` / `--amber` / `--red`, fonts). Do not resurrect `ui/theme.py`.
+- **Charts:** RSSI canvas + `requestAnimationFrame` in `signal.js`; ping Chart.js in `ping.js`, `animation: false`.
+- **Layout cues:** metric strip (Signal, SNR, PHY, Ping, loss); status bar; side panel ~280px in grid — match existing HTML/CSS when changing structure.
 
 ---
 

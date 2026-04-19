@@ -275,3 +275,5 @@ window.__netscopeRefreshPing = function () {
 };
 
 render(null, false);
+
+document.addEventListener("ws:data", e => updatePingModule(e.detail));

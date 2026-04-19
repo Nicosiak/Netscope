@@ -2,7 +2,7 @@
 
 > Read this file first. It contains everything needed to work on this repo without exploring the codebase.
 
-**Quick orientation (path → purpose):** [docs/INVENTORY.md](docs/INVENTORY.md)
+**Shallow index (path → one line):** [docs/INVENTORY.md](docs/INVENTORY.md). **This file** is the long **file map + APIs**. Setup and user-facing run instructions: [README.md](README.md).
 
 ## What this is
 
@@ -10,15 +10,18 @@ macOS-only WiFi/network diagnostics **web app**. Python 3.11+ · FastAPI + WebSo
 
 Entry point: `web/main.py` → spawns uvicorn → opens PyWebView window (or print URL for browser).
 
-**Run without long shell commands:** `make run` from repo root (uses `.venv`); `make stop` kills whatever is on port 8765. In Cursor/VS Code: **Terminal → Run Task… → NetScope: Run** (default build task), or **Run and Debug → NetScope (web/main.py)** for breakpoints.
+**Run / stop:** `make run` and `make stop` from repo root (see [README.md](README.md#run)). In Cursor/VS Code: **Run Task… → NetScope: Run**, or **Run and Debug → NetScope (web/main.py)**.
 
 ### Claude Code skills (not `.agents/`)
 
-Claude Code CLI loads skills from **`~/.claude/skills/<name>/SKILL.md`** (all projects) or **this repo’s `.claude/skills/<name>/SKILL.md`**. It does **not** read `.agents/skills/`. If the same `name` exists in both places, **personal wins** over project — avoid duplicating `frontend-design` globally or you’ll shadow the repo copy.
+Claude Code resolves **`/skill-name`** from:
 
-**NetScope canonical copy:** **`frontend-design`** lives only under **`.claude/skills/frontend-design/`** here (versioned in git). Open Claude Code from this repo and use **`/frontend-design`**. For **other** projects, copy that folder into their `.claude/skills/` (or use a different skill `name` under `~/.claude/skills` if you want a generic variant). New `~/.claude/skills` dirs may require a CLI restart once so they get watched.
+- **`~/.claude/skills/<name>/SKILL.md`** (your machine, all projects), and/or
+- **`.claude/skills/<name>/SKILL.md`** in this repo (optional — add a folder when you want a project-only skill).
 
-**`skills-lock.json`:** optional marketplace provenance hash for that skill; the runnable instructions are always **`SKILL.md`**. See [docs/INVENTORY.md](docs/INVENTORY.md).
+It does **not** load skills from **`.agents/skills/`** (that path is for other tools). If the same `name` exists in both user and project dirs, the **user** copy wins.
+
+**This repo** does not ship a bundled skill; use **`claude plugin install`** / marketplace skills if you want extras (e.g. design helpers). Prefer **`.claude/settings.json`** for shared permissions and **`.claude/settings.local.json`** only for machine-specific overrides (that file is gitignored).
 
 ---
 

@@ -7,7 +7,7 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
 
-from collectors._subprocess import merged_output, run_text
+from core.subproc import merged_output, run_text
 
 _ANSWER_COUNT_RE = re.compile(r",\s*ANSWER:\s*(\d+),", re.IGNORECASE)
 
