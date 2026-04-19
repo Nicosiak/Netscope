@@ -1,0 +1,64 @@
+# NetScope — Claude Code indexing excludes (same syntax as .gitignore).
+# Keep the Python/cache/vendor section aligned with .gitignore; below adds Claude-only noise (e.g. .git/, settings.local.json).
+
+# ── Python / packaging ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+dist/
+build/
+
+# ── Virtual environments ─────────────────────────────────────────
+.venv/
+venv/
+
+# ── Secrets / local env (never index) ────────────────────────────
+.env
+.env.local
+.env.*
+
+# ── OS / editors ─────────────────────────────────────────────────
+.DS_Store
+.idea/
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# VS Code / Cursor — shared tasks & launch are un-ignored below
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# ── Test / coverage / type / lint caches ────────────────────────
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+.pytest_cache/
+coverage.xml
+.ruff_cache/
+.mypy_cache/
+
+# ── Optional local scratch ───────────────────────────────────────
+report.txt
+*.log
+
+# ── Vendored frontend (downloaded; large minified bundles) ───────
+web/frontend/vendor/
+
+# ── Git object store (not useful as text context) ──────────────
+.git/
+
+# ── Local DB copies if ever created under the repo ─────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Local-only Claude overrides (API keys, machine paths) ──────
+.claude/settings.local.json
+
+# ── Future JS tooling (harmless if absent) ─────────────────────
+node_modules/

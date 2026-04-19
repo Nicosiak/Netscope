@@ -162,9 +162,9 @@ flowchart LR
         F[fetch /api/...]
     end
 
-    subgraph BE["web/backend/server.py"]
-        R[Route handler]
-        S["_sanitize(host)\nhost_sanitize"]
+    subgraph BE["web/backend"]
+        R[routes/*.py\nRoute handlers]
+        S["helpers.sanitize_host\ncore.sanitize"]
         Col[collectors/*]
     end
 
@@ -173,7 +173,7 @@ flowchart LR
     R --> Col
 ```
 
-Every body that carries a **host** goes through **`core.host_sanitize.normalize_diagnostic_host`** (via `_sanitize` in `server.py`). Invalid hosts return **HTTP 400** before any subprocess runs.
+Every body that carries a **host** goes through **`helpers.sanitize_host`** → **`core.sanitize.normalize_diagnostic_host`**. Invalid hosts return **HTTP 400** before any subprocess runs.
 
 **Static assets:** `app.mount("/static", StaticFiles(directory=web/frontend))` serves the whole frontend directory. A middleware sets **no-store** cache headers for `*.js` / `*.css` under `/static/`. `GET /` reads `index.html` and replaces `__STATIC_V__` with a fingerprint derived from `index.html` and all `*.js` mtimes under `web/frontend/` so embedded WebViews do not keep stale bundles.
 
@@ -189,11 +189,12 @@ flowchart TB
     end
 
     subgraph WebBackend["web/backend"]
-        SRV["server.py\nroutes + /ws"]
+        SRV["server.py\n/ /ws + routers"]
+        RTE["routes/\nHTTP /api/*"]
         PLD["payload.py\nbuild unified dict"]
         ST["state.py\nPingState, RssiState,\nSessionState"]
         PW["ping_worker.py\nICMP thread"]
-        PST["ping_stats.py\nRTT stats copy"]
+        PST["ping_stats.py\nre-export"]
     end
 
     subgraph Shared["Shared libraries (repo root)"]
@@ -204,6 +205,8 @@ flowchart TB
 
     HTML --> JS
     JS <-->|WS + fetch| SRV
+    SRV --> RTE
+    RTE --> COL
     SRV --> PLD
     SRV --> COL
     PLD --> COL
@@ -214,9 +217,9 @@ flowchart TB
     SRV --> COR
 ```
 
-**Why `ping_stats.py` exists:** `collectors/ping_collector.py` imports **icmplib** at module import time. The WebSocket payload builder must stay import-safe if icmplib is absent, so **`web/backend/ping_stats.py`** duplicates the pure **`stats_from_rtt_history`** function. **Tests** assert both implementations stay aligned (`tests/test_ping_collector.py`).
+**Why `ping_stats` is split:** **`collectors/ping_stats.py`** holds **`stats_from_rtt_history`** (no **icmplib**). **`web/backend/ping_stats.py`** re-exports it so **`payload`** stays import-safe if **icmplib** is absent. **`collectors/ping_collector`** imports the same helper for `PingSampler`. **Tests** cross-check collector vs web re-export (`tests/test_ping_collector.py`).
 
-**`core/` today:** `sanitize`, `host_sanitize`, `session`, `storage` (SQLite + writer thread), `alerts` (alert engine), `version`. There is **no** separate “health bus” module in current tree; health-style signalling is the WebSocket payload + optional session snapshots.
+**`core/` today:** `sanitize` (metrics + **`normalize_diagnostic_host`**), `subproc`, `session`, `session_summary`, `storage`, `alerts`, `version`. No separate “health bus”; live signalling is the WebSocket payload + optional session snapshots.
 
 ---
 
@@ -303,25 +306,28 @@ For snapshots, alerts are **re-evaluated** using **`rssi_avg10`** (or raw signal
 
 ```
 netscope/
-├── collectors/          # CoreWLAN + subprocess tools: wifi, ping helpers, dns, speed,
-│                        # traceroute, interface, iperf, network_info, nmap, _subprocess
-├── core/                # sanitize, host_sanitize, session, storage, alerts, version
+├── collectors/          # CoreWLAN + subprocess tools: wifi, ping_stats, ping_collector, dns, speed,
+│                        # traceroute, interface, iperf, network_info, nmap
+├── core/                # sanitize (+ host validation), subproc, session, session_summary,
+│                        # storage, alerts, version
 ├── analysis/            # thresholds, recommendations (no I/O)
 ├── web/
 │   ├── main.py          # uvicorn subprocess + PyWebView
 │   ├── backend/
-│   │   ├── server.py    # FastAPI, /ws, /api/*
+│   │   ├── server.py    # FastAPI shell: /, /ws, static; mounts routes/
+│   │   ├── routes/      # diagnostics, info, sessions, wifi
+│   │   ├── helpers.py, models.py
 │   │   ├── payload.py   # ~250 ms unified dict + session snapshot side effects
 │   │   ├── state.py     # PingState, RssiState, SessionState
 │   │   ├── ping_worker.py
-│   │   └── ping_stats.py
+│   │   └── ping_stats.py  # re-exports collectors.ping_stats
 │   └── frontend/
 │       ├── index.html   # SPA + theme CSS; script tags for all JS modules
 │       ├── app.js       # tabs + boot
 │       ├── ws.js, utils.js, signal.js, ping.js, scan.js, tools.js, …
 │       └── vendor/      # Chart.js (often gitignored; downloaded by setup script)
 ├── tests/               # pytest; validate_all.py = optional live Mac
-├── docs/                # OVERVIEW.md, this file
+├── docs/                # INVENTORY.md, OVERVIEW.md, this file
 ├── Makefile             # convenience targets (e.g. run/stop) if present
 ├── requirements.txt
 └── README.md
@@ -404,7 +410,7 @@ Rule of thumb: **ping writes** and **payload reads** are synchronized via `PingS
 
 | Layer | How |
 |--------|-----|
-| Pure logic | `analysis/`, `core/sanitize`, `ping_stats` ↔ `ping_collector` stats — **pytest** with mocks / Hypothesis |
+| Pure logic | `analysis/`, `core/sanitize`, `collectors/ping_stats` + `web/backend/ping_stats` re-export — **pytest** with mocks / Hypothesis |
 | Collectors | Mocked subprocess / XML fixtures (e.g. nmap tests) |
 | Full stack on a Mac | `python tests/validate_all.py` — live Wi‑Fi, ping, dig, route, etc. |
 | CI | GitHub Actions workflow: **pytest**, **ruff**, **compileall**, **bandit** (see `.github/workflows/`) |
@@ -413,6 +419,7 @@ Rule of thumb: **ping writes** and **payload reads** are synchronized via `PingS
 
 ## 15. Further reading
 
+- [INVENTORY.md](INVENTORY.md) — path → purpose (thin table)  
 - [OVERVIEW.md](OVERVIEW.md) — condensed architecture + **security** section  
 - [AGENTS.md](../AGENTS.md) — rules for contributors and automated agents  
 - [README.md](../README.md) — install, run, feature list  

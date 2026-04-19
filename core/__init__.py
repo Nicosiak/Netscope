@@ -1,1 +1,1 @@
-"""NetScope core — data layer, sessions, alerts, health bus, sanitization."""
+"""NetScope core — data layer, sessions, alerts, sanitization, subprocess helpers."""

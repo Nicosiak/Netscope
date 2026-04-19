@@ -2,6 +2,8 @@
 
 > Read this file first. It contains everything needed to work on this repo without exploring the codebase.
 
+**Quick orientation (path → purpose):** [docs/INVENTORY.md](docs/INVENTORY.md)
+
 ## What this is
 
 macOS-only WiFi/network diagnostics **web app**. Python 3.11+ · FastAPI + WebSocket · PyWebView (native window) · CoreWLAN (PyObjC). Binds to `127.0.0.1:8765` only — no remote service. Version: see `VERSION` file.
@@ -16,6 +18,8 @@ Claude Code CLI loads skills from **`~/.claude/skills/<name>/SKILL.md`** (all pr
 
 **NetScope canonical copy:** **`frontend-design`** lives only under **`.claude/skills/frontend-design/`** here (versioned in git). Open Claude Code from this repo and use **`/frontend-design`**. For **other** projects, copy that folder into their `.claude/skills/` (or use a different skill `name` under `~/.claude/skills` if you want a generic variant). New `~/.claude/skills` dirs may require a CLI restart once so they get watched.
 
+**`skills-lock.json`:** optional marketplace provenance hash for that skill; the runnable instructions are always **`SKILL.md`**. See [docs/INVENTORY.md](docs/INVENTORY.md).
+
 ---
 
 ## Exact file map
@@ -23,26 +27,26 @@ Claude Code CLI loads skills from **`~/.claude/skills/<name>/SKILL.md`** (all pr
 ```
 collectors/
   wifi_collector.py       CoreWLAN metrics (RSSI, SNR, PHY, channel, band); scutil SSID/BSSID fallback
-  ping_collector.py       PingSampler class (Tk-era, unused by web); stats_from_rtt_history() used by tests
-  ping_collector.py:17    stats_from_rtt_history() — mirrors web/backend/ping_stats.py (intentional, keep in sync)
+  ping_collector.py       PingSampler (legacy Tk); imports stats_from_rtt_history from ping_stats
+  ping_stats.py           Canonical stats_from_rtt_history() — no icmplib; shared with web/backend/ping_stats
   iperf_collector.py      iperf3 subprocess; iperf3_available(), run_iperf3(), summarize_result()
   dns_collector.py        compare_servers() — parallel dig calls (system, 8.8.8.8, 1.1.1.1, 9.9.9.9)
   speed_collector.py      run_network_quality(max_runtime_sec?), extract_metrics(), summarize() — networkQuality
-  traceroute_collector.py traceroute(), nonblank_traceroute_lines()
+  traceroute_collector.py traceroute(), nonblank_traceroute_lines(), hop parsing
   interface_collector.py  snapshot() — ifconfig + networksetup + route
   network_info_collector.py  fetch() — gateway, DNS, proxy, public IP, Wi-Fi details; vendor cached by OUI
   nmap_collector.py       run_nmap(), nmap_available(), nmap_version_line(), preset_ids() — bounded argv + `-oX -` parse
-  _subprocess.py          run_merged_safe() — shared subprocess helper with timeout
 
 core/
+  subproc.py              run_text(), merged_output(), run_merged_safe() — shared subprocess helpers (timeouts, list argv)
   alerts.py               AlertEngine, DEFAULT_RULES, alert_engine singleton — evaluated in payload.build()
   storage.py              SQLite session snapshots under ~/.netscope/; thread-safe queue writer
                           Tables: sessions (id, customer_name, customer_address, notes, tags, started_at, ended_at)
                                   snapshots (session_id, kind, ts, data JSON)
                           kinds: "stability" (every 5–15 s), "spike" (immediate on spike, throttled 5 s)
-  sanitize.py             sanitize_property() — no injection
-  host_sanitize.py        normalize_diagnostic_host() — validates user-supplied targets
+  sanitize.py             WiFi/ping metric sanitization + normalize_diagnostic_host() (host argv safety; merged ex-host_sanitize)
   session.py              Session dataclass; TAGS = ["ISP Issue","Hardware","Placement","Interference","Resolved"]
+  session_summary.py      Pure snapshot aggregation for session summary API
   version.py              read_version() reads VERSION file
 
 analysis/
@@ -52,13 +56,16 @@ analysis/
 web/
   main.py                 uvicorn launcher + PyWebView window
   backend/
-    server.py             FastAPI app, WebSocket /ws, all API routes (including session routes)
+    server.py             FastAPI app: `/`, `/ws`, static mount; includes routers from routes/
+    routes/               APIRouter modules: diagnostics, info, sessions, wifi (paths under /api/…)
+    helpers.py            sanitize_host() → core.sanitize.normalize_diagnostic_host + HTTP 400
+    models.py             Pydantic request bodies for routes
     payload.py            build() — unified JSON dict ~250ms tick; WiFi cache 400ms TTL (lock-protected)
                           Also auto-logs stability/spike snapshots when a session is active (see Session logging)
     ping_worker.py        background 1Hz ICMP thread; writes to state.ping
     state.py              PingState + RssiState + SessionState thread-safe singletons (ping, rssi, session)
                           SessionState tracks active session ID + snapshot/event throttle timestamps
-    ping_stats.py         stats_from_rtt_history() — mirrors collectors/ping_collector.py
+    ping_stats.py         Re-exports collectors.ping_stats.stats_from_rtt_history (payload stays icmplib-free at import)
                           p95 uses nearest-rank: sv[min(ceil(0.95*n)-1, n-1)]
   frontend/
     index.html            SPA template; all CSS vars; alert-banner; session pill slot + modal HTML
@@ -172,4 +179,4 @@ macOS CLI (not packaged): `ping`, `dig`, `traceroute`, `networkQuality` (12+), `
 
 ## Known intentional duplication
 
-`web/backend/ping_stats.py` mirrors `collectors/ping_collector.stats_from_rtt_history` — avoids icmplib import at payload module load. If you change one, change the other. Tests in `tests/test_ping_collector.py` cross-check them.
+`collectors/ping_stats.py` holds **`stats_from_rtt_history`**. `collectors/ping_collector` and `web/backend/ping_stats` both use it so `payload` never imports `icmplib` at module load. Tests in `tests/test_ping_collector.py` cross-check collector vs web re-export.

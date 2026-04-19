@@ -1,6 +1,6 @@
 # NetScope — architecture & security
 
-**Release:** v1.0.0 (`VERSION` at repo root, `CHANGELOG.md`). **Setup and features:** [README.md](../README.md) · **Agent / coding rules:** [AGENTS.md](../AGENTS.md) · **In-depth guide (diagrams):** [PROJECT_DEEP_DIVE.md](PROJECT_DEEP_DIVE.md)
+**Release:** v1.0.0 (`VERSION` at repo root, `CHANGELOG.md`). **Setup:** [README.md](../README.md) · **Path inventory:** [INVENTORY.md](INVENTORY.md) · **Agent rules:** [AGENTS.md](../AGENTS.md) · **Claude Code map:** [CLAUDE.md](../CLAUDE.md) · **Deep dive (diagrams):** [PROJECT_DEEP_DIVE.md](PROJECT_DEEP_DIVE.md)
 
 ---
 
@@ -17,13 +17,16 @@ macOS-only **local web app**: FastAPI + WebSocket on `127.0.0.1`, UI in `web/fro
 | Area | Role |
 |------|------|
 | `collectors/` | Dict-shaped reads from CoreWLAN + subprocess tools; timeouts everywhere. |
-| `core/` | Sanitize, SQLite sessions (`~/.netscope/`), alerts, health bus, host validation. |
+| `core/` | Sanitize (incl. host validation), SQLite sessions (`~/.netscope/`), alerts, subprocess helpers, session summary helpers. |
 | `analysis/` | Thresholds and recommendation strings — pure logic, no I/O. |
-| `web/backend/server.py` | FastAPI, WebSocket ~250 ms tick, tool APIs. |
+| `collectors/ping_stats.py` | Canonical `stats_from_rtt_history`; used by `ping_collector` and `web/backend/ping_stats`. |
+| `web/backend/server.py` | FastAPI shell: `/`, `/ws`, static files; mounts routers under `web/backend/routes/`. |
+| `web/backend/routes/` | HTTP APIs split by area (diagnostics, info, sessions, Wi‑Fi). |
 | `web/backend/payload.py` | Builds one unified JSON blob per tick for the UI. |
 | `web/backend/ping_worker.py` | ~1 Hz ICMP thread → `state.ping`. |
-| `web/backend/ping_stats.py` | Copy of RTT stats helper so `payload` does not import `icmplib` via `ping_collector`; keep in sync with `collectors/ping_collector.py`. |
-| `web/frontend/` | `index.html` + `app.js` — all theme hex here. |
+| `web/backend/ping_stats.py` | Re-exports `collectors/ping_stats.stats_from_rtt_history` so `payload` avoids importing `icmplib` at load. |
+| `web/frontend/` | SPA: `index.html`, modular `*.js` (e.g. `signal.js`, `ws.js`, `tools.js`), theme hex in HTML/JS only. |
+| `.claude/skills/` | Claude Code project skills (e.g. `frontend-design`). |
 | `web/main.py` | Spawns uvicorn, opens PyWebView. |
 | `tests/` | pytest + optional `validate_all.py` on real macOS. |
 
@@ -52,7 +55,7 @@ Collectors never touch the DOM. The browser only consumes JSON.
 2. **Wi‑Fi cache (~400 ms TTL)** — avoids hammering CoreWLAN at WebSocket rate.  
 3. **SQLite writer thread** — bounded snapshots; large JSON writes skipped.  
 4. **Ping fallback** — system `ping` if `icmplib` missing or fails.  
-5. **`host_sanitize`** on user-supplied targets before traceroute / iperf / ping APIs.
+5. **`core.sanitize.normalize_diagnostic_host`** on user-supplied targets before traceroute / iperf / ping APIs (via route `sanitize_host`).
 
 ---
 
@@ -68,7 +71,7 @@ NetScope is a **local web app** on your Mac. It does not ship a public remote AP
 
 ### Mitigations in this repo
 
-- **Subprocesses:** argument lists, not `shell=True`, for user-controlled hosts. **`core.host_sanitize.normalize_diagnostic_host`** before traceroute, iperf, and ping target changes.  
+- **Subprocesses:** argument lists, not `shell=True`, for user-controlled hosts. **`core.sanitize.normalize_diagnostic_host`** before traceroute, iperf, and ping target changes.  
 - **SQLite:** parameterized queries in `core/storage.py`.  
 - **iperf3:** output capped (~2M chars); process killed on timeout / overflow.  
 - **Session snapshots:** JSON over **1 MB** is not written (skipped, stderr notice).  

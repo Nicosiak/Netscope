@@ -7,20 +7,21 @@ alwaysApply: true
 
 macOS WiFi and network diagnostics **web app** (FastAPI + WebSocket + PyWebView). Python 3.12+ recommended (3.11+). CoreWLAN via PyObjC. Local only.
 
-## Structure
+**Full tree + APIs:** [CLAUDE.md](../../CLAUDE.md) · **Path purposes:** [docs/INVENTORY.md](../../docs/INVENTORY.md)
 
-- `.claude/skills/` — Claude Code CLI skills (`<name>/SKILL.md`). Not `.agents/` (ignored by Claude Code).
-- `collectors/` — Background data collection; plain dicts; daemon threads where used; subprocess timeouts.
-- `core/` — Storage, session, alerts, sanitization.
-- `analysis/` — Thresholds, classification, recommendations (no UI).
-- `web/backend/` — FastAPI, WebSocket tick, payload build, ping worker.
-- `web/frontend/` — `index.html`, `app.js` — full UI; theme hex lives here (not Python).
-- `web/main.py` — Starts uvicorn + optional PyWebView window.
-- `tests/validate_all.py` — Optional live macOS cross-check vs CLI.
+## Structure (short)
+
+- `.claude/skills/` — Claude Code skills (`<name>/SKILL.md`). Not `.agents/`.
+- `collectors/` — CoreWLAN + CLI tools; dicts; timeouts; `ping_stats` = canonical RTT stats.
+- `core/` — Sanitize (incl. `normalize_diagnostic_host`), `subproc`, storage, alerts, sessions.
+- `analysis/` — Thresholds + recommendations (no I/O).
+- `web/backend/` — `server.py` + `routes/` + `payload` + `ping_worker` + `state`.
+- `web/frontend/` — SPA: `index.html` + modular `*.js`; theme hex in frontend only.
+- `web/main.py` — uvicorn + PyWebView launcher.
 
 ## Key conventions
 
-- **Web:** data path is Collector → dict → WebSocket JSON → `app.js` → DOM.
-- **Subprocesses:** always `timeout=`; prefer argument lists, never `shell=True` for user input.
+- **Web:** Collector → dict → WebSocket → `ws.js` → tab JS → DOM.
+- **Subprocesses:** always `timeout=`; list argv; never `shell=True` for user input.
 - **CoreWLAN:** SSID/BSSID may be None without Location Services — handle gracefully.
-- **Charts:** RSSI canvas uses `requestAnimationFrame`; ping Chart.js with `animation: false`.
+- **Charts:** RSSI canvas + rAF in `signal.js`; ping Chart.js in `ping.js`, `animation: false`.

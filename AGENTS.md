@@ -1,6 +1,6 @@
 # NetScope — Agent Guidelines
 
-**User overview:** README.md · **Architecture & security:** docs/OVERVIEW.md · **Deep dive (diagrams):** docs/PROJECT_DEEP_DIVE.md
+**Path inventory:** docs/INVENTORY.md · **User overview:** README.md · **Architecture & security:** docs/OVERVIEW.md · **Claude Code (full map):** CLAUDE.md · **Deep dive (diagrams):** docs/PROJECT_DEEP_DIVE.md
 
 ---
 
@@ -13,29 +13,33 @@ macOS WiFi and network diagnostics **web app**. **Current release: v1.0.0** (see
 ## Folder structure
 
 ```
-.claude/skills/        → Claude Code CLI skills only (`<name>/SKILL.md`). Not `.agents/` — Claude Code ignores that path.
-collectors/            → Data acquisition — plain dicts, subprocess timeouts, daemon threads where used
-core/                  → Sanitization, SQLite session storage, alerts, session model
+.claude/skills/        → Claude Code CLI skills (`<name>/SKILL.md`). Not `.agents/` — Claude Code ignores that path.
+collectors/            → Data acquisition — plain dicts, subprocess timeouts; includes ping_stats (canonical RTT stats)
+core/                  → Sanitize (incl. host validation), subproc helpers, SQLite sessions, alerts, session model
 analysis/              → Thresholds, classification, recommendations (no UI, no I/O)
 web/
-  backend/server.py    → FastAPI app, WebSocket feed, API routes
+  backend/server.py    → FastAPI shell: `/`, `/ws`, static; includes routers from backend/routes/
+  backend/routes/      → HTTP API slices (diagnostics, info, sessions, wifi)
+  backend/helpers.py, models.py → shared route helpers and Pydantic bodies
   backend/payload.py   → Unified live dict ~250 ms tick
   backend/ping_worker.py, state.py, ping_stats.py
-  frontend/index.html, app.js  → UI; theme hex lives here only
+  frontend/            → index.html + modular *.js (signal, ws, ping, tools, …); theme hex here only
   main.py              → Starts uvicorn; opens PyWebView (or print URL for browser-only)
 tests/                 → pytest; `tests/validate_all.py` = optional live macOS CLI cross-check
 scripts/               → venv setup, test runner, cache clean — change only for broken paths or when asked
-docs/                  → OVERVIEW.md, PROJECT_DEEP_DIVE.md (Mermaid diagrams, flows)
+docs/                  → INVENTORY.md, OVERVIEW.md, PROJECT_DEEP_DIVE.md
 ```
+
+**Detailed file map and API table:** [CLAUDE.md](CLAUDE.md).
 
 ---
 
 ## Key patterns
 
 - **Collectors** — live in `collectors/`; imported by `web/backend/server.py` (and tests). Do not fork collector logic into the web tree except the **documented** duplicate: `web/backend/ping_stats.stats_from_rtt_history` mirrors `collectors.ping_collector` so `payload` does not import `icmplib` at module load; keep them in sync (see `tests/test_ping_collector.py`).
-- **Data flow** — Collector → dict → WebSocket JSON → `app.js` → DOM. One unified payload per tick.
-- **Charts** — RSSI: canvas in `app.js` + `requestAnimationFrame`. Ping: Chart.js, `animation: false`.
-- **Theme** — Hex only in `web/frontend/index.html` and `app.js`. No `ui/theme.py`.
+- **Data flow** — Collector → dict → WebSocket JSON → `ws.js` → tab modules → DOM. One unified payload per tick.
+- **Charts** — RSSI: canvas in `signal.js` + `requestAnimationFrame`. Ping: Chart.js in `ping.js`, `animation: false`.
+- **Theme** — Hex only in `web/frontend/index.html` and frontend JS. No `ui/theme.py`.
 
 ---
 
