@@ -12,9 +12,9 @@ Entry point: `web/main.py` → spawns uvicorn → opens PyWebView window (or pri
 
 ### Claude Code skills (not `.agents/`)
 
-Claude Code CLI loads skills only from **`~/.claude/skills/<name>/SKILL.md`** (all projects) or **this repo’s `.claude/skills/<name>/SKILL.md`** (project-only). It does **not** read `.agents/skills/`.
+Claude Code CLI loads skills from **`~/.claude/skills/<name>/SKILL.md`** (all projects) or **this repo’s `.claude/skills/<name>/SKILL.md`**. It does **not** read `.agents/skills/`. If the same `name` exists in both places, **personal wins** over project — avoid duplicating `frontend-design` globally or you’ll shadow the repo copy.
 
-This repo includes **`frontend-design`** under `.claude/skills/frontend-design/`. Invoke with **`/frontend-design`** in Claude Code. If you add a new top-level `~/.claude/skills` directory, restart the CLI once so it starts watching it.
+**NetScope canonical copy:** **`frontend-design`** lives only under **`.claude/skills/frontend-design/`** here (versioned in git). Open Claude Code from this repo and use **`/frontend-design`**. For **other** projects, copy that folder into their `.claude/skills/` (or use a different skill `name` under `~/.claude/skills` if you want a generic variant). New `~/.claude/skills` dirs may require a CLI restart once so they get watched.
 
 ---
 
