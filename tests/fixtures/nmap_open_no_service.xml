@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun scanner="nmap">
+<host>
+  <status state="up"/>
+  <address addr="127.0.0.1" addrtype="ipv4"/>
+  <hostnames/>
+  <ports>
+    <port protocol="tcp" portid="49152">
+      <state state="open" reason="syn-ack"/>
+    </port>
+  </ports>
+</host>
+</nmaprun>

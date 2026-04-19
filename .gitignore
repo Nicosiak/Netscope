@@ -9,7 +9,9 @@ venv/
 .env
 .DS_Store
 .idea/
-.vscode/
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
 
 # Test / coverage / property testing caches
 .coverage
@@ -21,3 +23,6 @@ coverage.xml
 
 # Optional local scratch / reports
 report.txt
+
+# Vendored frontend assets (downloaded by setup_venv.sh, not committed)
+web/frontend/vendor/

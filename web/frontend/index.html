@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d1117'/><circle cx='16' cy='16' r='3' fill='%2338bdf8'/><path d='M16 8 A8 8 0 0 1 24 16' stroke='%2338bdf8' stroke-width='2' fill='none' stroke-linecap='round'/><path d='M16 4 A12 12 0 0 1 28 16' stroke='%2338bdf8' stroke-width='2' fill='none' stroke-linecap='round' opacity='.5'/></svg>">
 <title>NetScope</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="/static/vendor/chart.umd.min.js"></script>
 <style>
 /* ── Reset & base ─────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -128,23 +128,31 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
 .presets .preset{font-family:var(--font);font-size:10px;background:var(--bg-hover);color:var(--text-muted);border:1px solid var(--border);padding:4px 11px;border-radius:3px;cursor:pointer}
 .presets .preset:hover{border-color:var(--sky);color:var(--sky)}
 
+/* ── Tools tab: vertical stack of modules ─ */
+#tab-tools .tools-page { min-width: 0; }
+#tab-tools .tools-stack { display: flex; flex-direction: column; gap: 14px; }
+
 /* ── Ping module (from ping-reference.html; scoped chart-header avoids Signal tab) ─ */
   /* PING MODULE — self-contained card */
   .ping-module { background: #0d1117; border: 1px solid #1a2030; border-radius: 6px; overflow: hidden; }
 
-  .ping-module .ping-header { padding: 10px 14px; border-bottom: 1px solid #1a2030; display: flex; align-items: center; justify-content: space-between; }
-  .ping-module .ping-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; }
-  .ping-module .ping-input-row { display: flex; align-items: center; gap: 8px; }
-  .ping-module .ping-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: ping-ref-pulse 1s infinite; flex-shrink: 0; }
+  .ping-module .ping-header { padding: 8px 14px; border-bottom: 1px solid #1a2030; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .ping-module .ping-module-title { font-size: 12px; font-weight: 700; color: #e2e8f0; letter-spacing: 0.14em; text-transform: uppercase; flex-shrink: 0; margin-right: 2px; }
+  .ping-module .ping-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: ping-ref-pulse 1s infinite; flex-shrink: 0; }
+  .ping-module .ping-live-dot.paused { background: #334155; animation: none; }
   @keyframes ping-ref-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .ping-module .ping-input { background: #0a0c0f; border: 1px solid #1e2530; color: #e2e8f0; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-family: inherit; width: 130px; outline: none; }
+  .ping-module .pill { font-size: 10px; padding: 3px 9px; border-radius: 3px; background: #1a2030; color: #64748b; border: 1px solid transparent; cursor: pointer; font-family: inherit; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+  .ping-module .pill:hover:not(:disabled) { background: #1a2e40; color: #38bdf8; }
+  .ping-module .pill.active { background: #0c2a3d; color: #38bdf8; border-color: #1e4a6a; }
+  .ping-module .pill:disabled { opacity: 0.4; cursor: default; }
+  .ping-module .ping-sep { width: 1px; height: 14px; background: #1e2840; flex-shrink: 0; margin: 0 1px; }
+  .ping-module .ping-input { background: #0a0c0f; border: 1px solid #1e2530; color: #e2e8f0; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-family: inherit; width: 160px; outline: none; }
   .ping-module .ping-input:focus { border-color: #38bdf8; }
-  .ping-module .ping-apply { background: #38bdf8; color: #0a0c0f; border: none; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; }
-
-  .ping-module .ping-pills { padding: 6px 14px; border-bottom: 1px solid #1a2030; display: flex; gap: 6px; flex-wrap: wrap; }
-  .ping-module .pill { font-size: 10px; padding: 2px 8px; border-radius: 3px; background: #1a2030; color: #64748b; border: none; cursor: pointer; font-family: inherit; transition: background 0.15s, color 0.15s; }
-  .ping-module .pill:hover { background: #1e2d3d; color: #38bdf8; }
-  .ping-module .pill.active { background: #0c2a3d; color: #38bdf8; }
+  .ping-module .ping-input::placeholder { color: #334155; }
+  .ping-module .ping-stop { background: transparent; border: 1px solid #334155; color: #64748b; padding: 3px 11px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s, border-color 0.15s, color 0.15s; }
+  .ping-module .ping-stop:hover { background: #2d0a0a; border-color: #ef4444; color: #ef4444; }
+  .ping-module .ping-stop.stopped { border-color: #166534; color: #22c55e; background: #052e16; }
+  .ping-module .ping-stop.stopped:hover { background: #14532d; border-color: #22c55e; color: #4ade80; }
 
   .ping-module .metrics-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: #1a2030; border-bottom: 1px solid #1a2030; }
   .ping-module .metric { background: #0d1117; padding: 10px 14px; }
@@ -155,7 +163,7 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
   .ping-module .chart-section { padding: 12px 14px 0; }
   .ping-module .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .ping-module .chart-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #334155; }
-  .ping-module .chart-meta { font-size: 9px; color: #1e2d3d; }
+  .ping-module .chart-meta { font-size: 9px; color: #64748b; }
   .ping-module .loss-row { display: flex; gap: 1px; padding: 4px 0 0; }
   .ping-module .loss-tick { flex: 1; height: 4px; border-radius: 1px; background: #1a2030; }
 
@@ -178,6 +186,168 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
 .result-pre{background:transparent;color:var(--text-slate);font-family:var(--font);font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-all;padding:14px 16px 16px;border-top:1px solid var(--border)}
 .result-pre:empty{display:none}
 
+/* Traceroute — palette + chrome from traceroute_netscope_theme.html (scoped #trace-module) */
+.card#trace-module.trace-dash{
+  background:var(--bg-card);
+  box-shadow:inset 4px 0 0 #00e5b4;
+  border-radius:0 8px 8px 0;
+  padding:0;
+}
+#trace-module .tr-ref-panel-root{
+  --ns-teal:#00e5b4;
+  --ns-teal-bg:#00e5b420;
+  --ns-teal-br:#00e5b440;
+  --ns-border:#1e2530;
+  --ns-panel:#0b0d10;
+  --ns-surface:#0f1215;
+  --ns-track:#141a22;
+  background:var(--ns-panel);
+  border:1px solid var(--ns-border);
+  border-radius:8px;
+  margin:0 12px 12px;
+  overflow:hidden;
+}
+#trace-module .tr-ref-toolbar{
+  background:var(--ns-surface);
+  border-bottom:1px solid var(--ns-border);
+  padding:14px 18px 12px;
+}
+#trace-module .tr-ref-toolbar-top{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px;
+}
+#trace-module .tr-ref-toolbar-title{
+  font-size:12px;font-weight:700;color:#c8d8e8;letter-spacing:.14em;text-transform:uppercase;
+}
+#trace-module .tr-ref-toolbar-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#trace-module .tr-ref-pills{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
+#trace-module .tr-ref-pill{
+  font-size:11px;padding:5px 12px;border-radius:4px;background:#1a2030;color:#8899aa;border:1px solid #252d3d;
+  cursor:pointer;font-family:inherit;transition:background .15s,color .15s,border-color .15s;line-height:1.2;
+}
+#trace-module .tr-ref-pill:hover:not(:disabled){background:#1a2e40;color:var(--ns-teal);border-color:var(--ns-border)}
+#trace-module .tr-ref-pill.tr-ref-pill-active{background:#002820;color:var(--ns-teal);border-color:var(--ns-teal-br)}
+#trace-module .tr-ref-pill:disabled{opacity:.4;cursor:default}
+#trace-module .tr-ref-sep{width:1px;height:22px;background:var(--ns-border);flex-shrink:0;margin:0 2px}
+#trace-module .input.tr-ref-host-input{
+  flex:1 1 220px;min-width:0;max-width:none;width:auto!important;min-height:34px;
+  background:#0a0c0f;border:1px solid var(--ns-border);color:#c8d8e8;
+}
+#trace-module .input.tr-ref-host-input:focus{
+  border-color:#00e5b488;outline:none;box-shadow:0 0 0 1px rgba(0,229,180,.12);
+}
+#trace-module .btn.btn-primary.tr-ref-run-btn{
+  flex-shrink:0;padding-left:18px;padding-right:18px;background:var(--ns-teal);color:#0b0d10;border:none;font-weight:700;
+}
+#trace-module .btn.btn-primary.tr-ref-run-btn:hover:not(:disabled){filter:brightness(1.08)}
+#trace-module .btn.btn-primary.tr-ref-run-btn:disabled{opacity:.55}
+#trace-module .tr-ref-toolbar-desc{
+  margin:0;padding:10px 18px 12px;font-size:11px;color:#4a5568;line-height:1.6;
+  border-bottom:1px solid var(--ns-border);background:var(--ns-panel);
+}
+#trace-module .trace-hops-scroll{
+  display:block;min-height:260px;max-height:min(62vh,560px);overflow:auto;
+}
+@keyframes tr-ref-packet{0%{top:0;opacity:0}8%{opacity:1}92%{opacity:1}100%{top:100%;opacity:0}}
+@keyframes tr-ref-fade{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+@keyframes tr-ref-pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,180,.4)}50%{box-shadow:0 0 0 5px rgba(0,229,180,0)}}
+#trace-module .tr-ref-panel-root *,#trace-module .tr-ref-path *{box-sizing:border-box;font-family:var(--font)}
+#trace-module .tr-ref-path{background:transparent;margin:0;border:none;border-radius:0;overflow:hidden}
+#trace-module .tr-ref-header{
+  background:var(--ns-surface);border-bottom:1px solid var(--ns-border);padding:14px 18px;
+  display:flex;align-items:flex-end;gap:12px 20px;flex-wrap:wrap;
+}
+#trace-module .tr-ref-header-primary{flex:0 1 auto;min-width:0;max-width:min(100%,320px)}
+#trace-module .tr-ref-meta-item{min-width:0;max-width:min(160px,28vw)}
+#trace-module .tr-ref-meta-item .tr-ref-val{word-break:break-word}
+#trace-module .tr-ref-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--ns-teal);flex-shrink:0;
+  box-shadow:0 0 6px var(--ns-teal);animation:tr-ref-pulse 2s ease infinite;align-self:center;margin-bottom:2px;
+}
+#trace-module .tr-ref-badge{
+  margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  padding:2px 9px;border-radius:3px;color:var(--ns-teal);background:var(--ns-teal-bg);border:1px solid var(--ns-teal-br);
+  flex-shrink:0;opacity:.45;transition:opacity .2s ease;
+}
+#trace-module .tr-ref-badge.tr-ref-badge-live{opacity:1;box-shadow:0 0 8px rgba(0,229,180,.35)}
+#trace-module .tr-ref-label{font-size:10px;font-weight:400;color:#4a5568;text-transform:uppercase;letter-spacing:.12em}
+#trace-module .tr-ref-val{font-size:11px;color:#8899aa;margin-top:3px;line-height:1.35}
+#trace-module .tr-ref-title{font-size:15px;font-weight:600;color:#c8d8e8;margin-top:4px;word-break:break-word;line-height:1.25}
+#trace-module .tr-ref-div{height:28px;width:1px;background:var(--ns-border);flex-shrink:0}
+#trace-module .tr-ref-stats{
+  display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--ns-border);background:var(--ns-panel);gap:0;
+}
+#trace-module .tr-ref-stat{background:var(--ns-panel);padding:12px 16px;border-right:1px solid var(--ns-border)}
+#trace-module .tr-ref-stat:last-child{border-right:none}
+#trace-module .tr-ref-stat-lbl{font-size:9px;color:#4a5568;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px}
+#trace-module .tr-ref-stat-val{font-size:28px;font-weight:600;line-height:1;color:#c8d8e8;font-variant-numeric:tabular-nums}
+#trace-module .tr-ref-stat-unit{font-size:11px;color:#4a5568;margin-top:2px}
+#trace-module .tr-ref-colhead{
+  display:grid;grid-template-columns:22px 14px 1fr 150px 110px 56px 58px;
+  gap:0;padding:8px 18px 8px 14px;border-bottom:1px solid var(--ns-border);font-size:9px;color:#2e3f52;
+  text-transform:uppercase;letter-spacing:.12em;align-items:end;
+}
+#trace-module .tr-ref-colhead span[title],#trace-module .tr-ref-bar-track[title]{cursor:help}
+#trace-module .tr-ref-hop{
+  display:grid;grid-template-columns:22px 14px 1fr 150px 110px 56px 58px;
+  gap:0;padding:10px 18px 10px 14px;border-bottom:1px solid #10151b;align-items:start;
+  animation:tr-ref-fade .25s ease both;
+}
+#trace-module .tr-ref-hop:last-child{border-bottom:none}
+#trace-module .tr-ref-placeholder{
+  padding:28px 22px 32px;text-align:center;font-size:12px;color:#4a5568;line-height:1.55;
+  border-bottom:1px solid var(--ns-border);background:var(--ns-panel);
+}
+#trace-module .tr-ref-placeholder.tr-ref-ph-error{color:#cc2200}
+#trace-module .tr-ref-hoplist{min-width:0}
+#trace-module .tr-ref-hop:hover{background:#0f1520}
+#trace-module .tr-ref-hop-num{font-size:11px;color:#2e3f52;padding-top:4px}
+#trace-module .tr-ref-hostcol{min-width:0;overflow:hidden}
+#trace-module .tr-ref-spine-wrap{display:flex;flex-direction:column;align-items:center;padding-top:3px;height:100%}
+#trace-module .tr-ref-spine-node{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+#trace-module .tr-ref-spine-line{width:1px;background:var(--ns-border);flex:1;min-height:20px;position:relative;overflow:hidden;margin-top:3px}
+#trace-module .tr-ref-packet{position:absolute;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;animation:tr-ref-packet 1.8s linear infinite}
+#trace-module .tr-ref-packet:nth-child(2){animation-delay:.6s}
+#trace-module .tr-ref-packet:nth-child(3){animation-delay:1.2s}
+#trace-module .tr-ref-ip{font-size:12px;color:#c8d8e8;padding-left:10px}
+#trace-module .tr-ref-ip.muted{color:#2e3f52}
+#trace-module .tr-ref-host{font-size:10px;color:#3d5060;margin-top:1px;padding-left:10px;word-break:break-word}
+#trace-module .tr-ref-asn{
+  display:inline-block;font-size:9px;padding:2px 6px;border-radius:2px;margin-top:2px;letter-spacing:.04em;
+  white-space:nowrap;max-width:148px;overflow:hidden;text-overflow:ellipsis;border:1px solid transparent;
+}
+#trace-module .tr-ref-netbar{padding:10px 8px 0 0}
+#trace-module .tr-ref-rttcol{padding:2px 0 0 4px}
+#trace-module .tr-ref-noreply{font-size:9px;color:#2e3f52;margin-top:6px;text-transform:uppercase;letter-spacing:.1em}
+#trace-module .tr-ref-bar-track{height:4px;background:var(--ns-track);border-radius:2px;overflow:hidden;margin-top:6px}
+#trace-module .tr-ref-bar-fill{height:100%;border-radius:2px;transition:width .8s ease}
+#trace-module .tr-ref-ms{text-align:right;font-size:12px;padding-top:2px;font-weight:600;font-variant-numeric:tabular-nums}
+#trace-module .tr-ref-delta{text-align:right;font-size:11px;padding-top:3px;font-variant-numeric:tabular-nums;color:#2e3f52}
+#trace-module .tr-ref-verdict{
+  background:var(--ns-surface);border-top:1px solid var(--ns-border);padding:12px 18px;font-size:11px;line-height:1.55;color:#3d5060;
+}
+#trace-module .tr-ref-verdict-muted{color:#3d5060}
+#trace-module .tr-ref-verdict-accent{color:var(--ns-teal);font-weight:600}
+#trace-module .trace-raw-details{border-top:1px solid var(--ns-border);color:#8899aa;font-size:11px;background:var(--ns-panel)}
+#trace-module .trace-raw-details>summary{cursor:pointer;padding:10px 16px;user-select:none;letter-spacing:.2px}
+#trace-module .trace-raw-details>summary:hover{color:#c8d8e8}
+#trace-module .trace-raw-details .result-pre{border-top:0;padding-top:4px;color:#8899aa}
+
+/* ── WAN Link check ─────────────────────────────────────────── */
+.wan-status-row{padding:10px 16px 0;display:flex;align-items:center;gap:10px}
+.wan-badge{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:4px;border:1px solid currentColor}
+.wan-badge-up{color:#22c55e;background:rgba(34,197,94,.08)}
+.wan-badge-down{color:#ef4444;background:rgba(239,68,68,.08)}
+.wan-badge-unknown{color:#64748b;background:rgba(100,116,139,.08)}
+.wan-badge-checking{color:#f59e0b;background:rgba(245,158,11,.08)}
+.wan-gw-label{font-size:11px;color:var(--text-dim)}
+.wan-hops{display:flex;flex-direction:column;border-top:1px solid var(--border);padding:10px 16px 12px;gap:0}
+.wan-hop-row{display:grid;grid-template-columns:22px 1fr auto;gap:0 10px;padding:4px 0;align-items:baseline;border-bottom:1px solid #10151b;font-size:11px}
+.wan-hop-row:last-child{border-bottom:none}
+.wan-hop-num{color:var(--text-dim);font-size:10px}
+.wan-hop-host{color:var(--text-slate);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wan-hop-rtt{color:var(--text-slate);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px}
+.wan-hop-isp{color:var(--sky);font-weight:600}
+
 /* ── DNS bar chart ────────────────────────────────────────────── */
 .dns-bars{padding:12px 16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border)}
 .dns-bar-row{display:flex;align-items:center;gap:10px}
@@ -186,6 +356,17 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
 .dns-bar-fill{height:100%;border-radius:2px;transition:width .4s}
 .dns-bar-val{font-size:11px;font-weight:700;width:60px;text-align:right;flex-shrink:0}
 
+/* Speed test — running strip + JSON details */
+.speed-run-row{display:flex;align-items:center;gap:10px;margin:10px 0}
+.speed-run-track{flex:1;height:4px;background:var(--track);border-radius:2px;overflow:hidden;position:relative}
+.speed-indeterminate{position:absolute;left:0;top:0;height:100%;width:45%;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(56,189,248,.55),transparent);animation:speed-indet 1.1s ease-in-out infinite}
+@keyframes speed-indet{0%{transform:translateX(-100%)}100%{transform:translateX(320%)}}
+.speed-run-elapsed{font-size:11px;font-weight:600;color:var(--text-muted);min-width:3.5em;text-align:right}
+.speed-meta{font-size:11px;color:var(--text-slate);margin:0 0 8px;line-height:1.45}
+.speed-json-details{margin-top:8px;font-size:12px;color:var(--text-muted)}
+.speed-json-details summary{cursor:pointer;user-select:none;color:var(--text-slate)}
+.speed-json-details pre{margin:8px 0 0;max-height:240px;overflow:auto}
+
 /* ── Metric tiles row (speed/iperf) ───────────────────────────── */
 .metric-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--gap-bg);border-top:1px solid var(--border)}
 .metric-tile{background:var(--bg-hover);padding:10px 14px}
@@ -193,6 +374,60 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
 .metric-tile .mt-val{font-size:18px;font-weight:700;margin-top:4px}
 /* Info tab grid */
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+
+/* Security tab — same as Tools: tab scrolls; page is content-height with generous tail padding */
+#tab-security.tab-panel--security{min-height:0}
+#tab-security.tab-panel--security .page-content.security-page{
+  max-width:1000px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:14px;
+  overflow-x:hidden;padding-bottom:max(120px,18dvh)
+}
+#tab-security .security-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;flex-shrink:0}
+#tab-security .security-toolbar-title{font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--text-muted);text-transform:uppercase}
+#tab-security .security-band{
+  flex:0 1 auto;display:flex;flex-direction:column;overflow:visible;margin-bottom:0;padding-bottom:8px
+}
+#tab-security .security-band-title,
+#tab-security .security-band > .card-desc{flex-shrink:0}
+#tab-security .security-band-title{
+  font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--text-slate);text-transform:uppercase;
+  margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)
+}
+#tab-security .security-band-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;flex-shrink:0}
+@media (min-width:1024px){
+  #tab-security .security-band-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+#tab-security .sec-nmap-card{
+  flex:0 1 auto;display:flex;flex-direction:column;overflow:visible;margin-top:14px;margin-bottom:8px
+}
+#tab-security .sec-nmap-card .sec-nmap-card-header{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;flex-shrink:0
+}
+#tab-security .sec-nmap-card-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#tab-security .sec-nmap-card > .card-desc{flex-shrink:0}
+#tab-security .sec-nmap-version{margin:0 0 8px;font-size:10px;color:var(--text-dim)}
+#tab-security .sec-nmap-summary{margin:0 0 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#0a0c0f;overflow:auto;max-height:200px;display:none}
+#tab-security .sec-nmap-summary.has-rows{display:block}
+#tab-security .sec-nmap-summary table{width:100%;border-collapse:collapse}
+#tab-security .sec-nmap-summary th,#tab-security .sec-nmap-summary td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);color:var(--text-slate)}
+#tab-security .sec-nmap-summary th{font-size:10px;text-transform:uppercase;color:var(--text-muted);letter-spacing:.4px}
+#tab-security .sec-nmap-card .card-body{
+  display:flex;flex-direction:column;overflow:visible;padding-top:4px;padding-bottom:28px
+}
+#tab-security .sec-nmap-controls{flex-shrink:0}
+#tab-security .sec-nmap-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+#tab-security .sec-nmap-pill{font-size:10px;padding:5px 11px;border-radius:4px;background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;font-family:inherit;transition:background .15s,color .15s,border-color .15s}
+#tab-security .sec-nmap-pill:hover:not(:disabled){border-color:var(--sky);color:var(--sky)}
+#tab-security .sec-nmap-pill.active{background:#0c2a3d;color:var(--sky);border-color:#1e4a6a}
+#tab-security .sec-nmap-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+#tab-security .sec-nmap-target{min-width:180px;flex:1;max-width:300px}
+#tab-security .sec-nmap-out{
+  flex:0 1 auto;min-height:180px;max-height:min(58vh,600px);overflow:auto;margin:8px 0 20px;border:1px solid var(--border);border-radius:4px;background:#0a0c0f
+}
+#tab-security .sec-nmap-out .result-pre{
+  margin:0;border-top:0;padding:10px 12px 18px;box-sizing:border-box
+}
+#tab-security .sec-nmap-out .result-pre:empty{display:block;min-height:3rem;color:var(--text-dim)}
+#tab-security .security-em{color:var(--text-slate);font-weight:600}
 .info-list{padding:0}
 .info-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text-muted);padding:10px 16px 5px;border-bottom:1px solid var(--border)}
 .info-row{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);gap:16px}
@@ -214,6 +449,56 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
 
 /* ── Controls row ─────────────────────────────────────────────── */
 .ctrl-row{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
+
+/* ── Session pill & modal ─────────────────────────────────────── */
+.ns-pill{font-family:var(--font);font-size:11px;font-weight:700;padding:5px 12px;border-radius:4px;border:none;cursor:pointer;display:flex;align-items:center;gap:7px;letter-spacing:.3px;transition:opacity .15s}
+.ns-pill--none{background:transparent;color:var(--text-muted);border:1px solid var(--border)}.ns-pill--none:hover{border-color:var(--sky);color:var(--sky)}
+.ns-pill--active{background:#052e16;color:var(--green);border:1px solid #14532d}.ns-pill--active:hover{opacity:.85}
+.ns-pill-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;animation:ns-pulse 1.4s infinite}
+.ns-pill-dur{color:var(--text-muted);font-weight:400}
+@keyframes ns-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+#ns-session-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900}
+.ns-hidden{display:none!important}
+#ns-session-modal{position:fixed;top:60px;right:16px;z-index:901;min-width:340px;max-width:92vw}
+.ns-modal-card{background:var(--bg-card);border:1px solid var(--border-title);border-radius:6px;overflow:hidden}
+.ns-modal-card--wide{min-width:min(680px,94vw)}
+.ns-modal-header{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border);gap:12px}
+.ns-modal-title{font-size:13px;font-weight:700;color:var(--text-body)}
+.ns-modal-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.ns-modal-close{background:transparent;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:0 2px;flex-shrink:0}.ns-modal-close:hover{color:var(--text-body)}
+.ns-modal-body{padding:14px 16px}
+.ns-modal-body--scroll{max-height:min(70vh,540px);overflow-y:auto;padding:14px 16px}
+.ns-modal-footer{padding:8px 16px 12px;border-top:1px solid var(--border)}
+.ns-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.ns-field{margin-bottom:12px}
+.ns-label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px}
+.ns-textarea{width:100%;resize:vertical;min-height:64px}
+.ns-active-dur{display:flex;justify-content:space-between;align-items:center;padding:10px 0 12px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.ns-dur-lbl{font-size:11px;color:var(--text-muted)}
+.ns-dur-val{font-size:18px;font-weight:700;color:var(--sky);font-variant-numeric:tabular-nums}
+.ns-tags{display:flex;flex-wrap:wrap;gap:6px}
+.ns-tag{font-family:var(--font);font-size:10px;padding:4px 10px;border-radius:3px;background:var(--bg-hover);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.ns-tag:hover{border-color:var(--sky);color:var(--sky)}.ns-tag--on{background:#0c2a3d;color:var(--sky);border-color:#1e4a6a}
+.ns-btn-end{background:transparent;color:var(--amber);border:1px solid var(--amber)}.ns-btn-end:hover{background:#1c0d00}
+.ns-link{background:transparent;border:none;color:var(--sky);font-family:var(--font);font-size:11px;cursor:pointer;padding:0;text-decoration:none}.ns-link:hover{text-decoration:underline}
+.ns-hist-table{width:100%;border-collapse:collapse;font-size:12px}
+.ns-hist-table th{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);padding:8px 10px;border-bottom:1px solid var(--border);text-align:left}
+.ns-hist-table td{padding:9px 10px;border-bottom:1px solid var(--border)}
+.ns-hist-row{cursor:pointer}.ns-hist-row:hover td{background:var(--bg-hover)}
+.ns-review-meta{font-size:11px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.ns-review-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--gap-bg);border:1px solid var(--border);margin-bottom:12px}
+.ns-stat-tile{background:var(--bg-card);padding:12px 14px}
+.ns-stat-lbl{font-size:10px;text-transform:uppercase;color:var(--text-muted);letter-spacing:.4px;margin-bottom:4px}
+.ns-stat-val{font-size:20px;font-weight:700;color:var(--text-body)}
+.ns-tl-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:4px;max-height:340px;overflow-y:auto}
+.ns-tl-table{width:100%;border-collapse:collapse;font-size:11px}
+.ns-tl-table th{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);padding:7px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;position:sticky;top:0;background:var(--bg-card)}
+.ns-tl-table td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.ns-tl-warn td{background:rgba(245,158,11,.07)}
+.ns-tl-crit td{background:rgba(239,68,68,.09)}
+.ns-tl-spike td{background:rgba(56,189,248,.06);border-bottom-color:#1e3a50}
+.ns-tl-kind-badge{font-size:9px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border-radius:2px;background:var(--border);color:var(--text-dim)}
+.ns-tl-kind-spike{background:#0c2a3d;color:var(--sky);border:1px solid #1e4a6a}
 </style>
 </head>
 <body>
@@ -226,8 +511,14 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
       <button class="tab-btn active" data-tab="signal">SIGNAL</button>
       <button class="tab-btn" data-tab="tools">TOOLS</button>
       <button class="tab-btn" data-tab="info">INFO</button>
+      <button class="tab-btn" data-tab="security">SECURITY</button>
     </div>
+    <div id="ns-session-pill" style="margin-left:auto;padding-left:16px"></div>
   </div>
+
+  <!-- ── Session overlay + modal (managed by session.js) ──────── -->
+  <div id="ns-session-overlay" class="ns-hidden"></div>
+  <div id="ns-session-modal" class="ns-hidden"></div>
 
   <!-- ══════════════════════════════════════════════════════════ -->
   <!-- SIGNAL TAB                                                 -->
@@ -255,6 +546,9 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
       <div class="metric-cell"><div class="mlabel">Ping</div><div class="mvalue" id="m-ping">—</div><div class="munit">ms</div></div>
       <div class="metric-cell"><div class="mlabel">Packet Loss</div><div class="mvalue" id="m-loss">—</div><div class="munit">%</div></div>
     </div>
+
+    <!-- Alert banner (hidden until alerts fire) -->
+    <div id="alert-banner" style="display:none;padding:7px 16px;font-size:11px;font-weight:600;letter-spacing:.3px;flex-shrink:0;border-bottom:1px solid var(--border)"></div>
 
     <!-- Scrollable content -->
     <div class="sig-scroll">
@@ -308,7 +602,7 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
           <div>
             <div class="side-sec-label">LATENCY &amp; LOSS</div>
             <div class="side-row"><span class="srlbl">Ping</span><span class="srval" id="side-ping">—</span></div>
-            <div class="side-row"><span class="srlbl">Avg</span><span class="srval" id="side-avg">—</span></div>
+            <div class="side-row"><span class="srlbl">Median</span><span class="srval" id="side-avg">—</span></div>
             <div class="side-row"><span class="srlbl">Jitter</span><span class="srval" id="side-jitter">—</span></div>
             <div class="side-row"><span class="srlbl">Loss</span><span class="srval" id="side-loss">—</span></div>
           </div>
@@ -372,33 +666,29 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
   <!-- TOOLS TAB (ping + network utilities)                       -->
   <!-- ══════════════════════════════════════════════════════════ -->
   <div id="tab-tools" class="tab-panel scrollable">
-    <div class="page-content">
+    <div class="page-content tools-page">
+    <div class="tools-stack">
 
 <!-- PING MODULE — from ping-reference.html -->
-<div class="ping-module">
+<section class="ping-module tools-module" data-tool="ping" aria-labelledby="tools-ping-title">
 
   <div class="ping-header">
-    <div class="ping-title">Ping</div>
-    <div class="ping-input-row">
-      <div class="ping-live-dot"></div>
-      <input class="ping-input" id="ping-input" value="8.8.8.8" />
-      <button class="ping-apply" onclick="applyTarget()">Apply</button>
-    </div>
-  </div>
-
-  <div class="ping-pills">
+    <span class="ping-module-title" id="tools-ping-title">Ping</span>
+    <div class="ping-live-dot" id="ping-live-dot"></div>
+    <button class="pill" id="pill-gateway" onclick="pingGateway(this)">Gateway</button>
     <button class="pill active" onclick="quickSet('8.8.8.8',this)">8.8.8.8</button>
     <button class="pill" onclick="quickSet('1.1.1.1',this)">1.1.1.1</button>
-    <button class="pill" onclick="quickSet('9.9.9.9',this)">9.9.9.9</button>
     <button class="pill" onclick="quickSet('google.com',this)">google.com</button>
-    <button class="pill" onclick="quickSet('cloudflare.com',this)">cloudflare.com</button>
+    <div class="ping-sep"></div>
+    <input class="ping-input" id="ping-input" value="8.8.8.8" placeholder="custom host — press Enter" onkeydown="if(event.key==='Enter')applyTarget()" oninput="clearActivePill()" />
+    <button class="ping-stop" id="ping-stop-btn" onclick="togglePause()">Stop</button>
   </div>
 
   <div class="metrics-row">
     <div class="metric"><div class="metric-label">Current</div><div class="metric-value" id="m-cur" style="color:#22c55e">--</div><div class="metric-unit">ms</div></div>
-    <div class="metric"><div class="metric-label">Min</div><div class="metric-value" id="m-min" style="color:#22c55e">--</div><div class="metric-unit">ms</div></div>
+    <div class="metric"><div class="metric-label">Median</div><div class="metric-value" id="m-p50" style="color:#22c55e">--</div><div class="metric-unit">ms</div></div>
     <div class="metric"><div class="metric-label">Avg</div><div class="metric-value" id="m-avg" style="color:#22c55e">--</div><div class="metric-unit">ms</div></div>
-    <div class="metric"><div class="metric-label">Max</div><div class="metric-value" id="m-max" style="color:#22c55e">--</div><div class="metric-unit">ms</div></div>
+    <div class="metric"><div class="metric-label">p95</div><div class="metric-value" id="m-p95" style="color:#22c55e">--</div><div class="metric-unit">ms</div></div>
     <div class="metric"><div class="metric-label">Jitter</div><div class="metric-value" id="m-jit" style="color:#22c55e">--</div><div class="metric-unit">ms</div></div>
     <div class="metric"><div class="metric-label">Loss</div><div class="metric-value" id="m-loss" style="color:#22c55e">0</div><div class="metric-unit">%</div></div>
   </div>
@@ -406,9 +696,10 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
   <div class="chart-section">
     <div class="chart-header">
       <div class="chart-label">RTT over time</div>
-      <div class="chart-meta">80 samples · 1 Hz</div>
+      <div class="chart-meta" id="ping-chart-meta">—</div>
     </div>
-    <canvas id="pingChart" style="width:100%;height:130px;display:block"></canvas>
+    <div id="tool-activity" style="display:none;font-size:9px;color:#f59e0b;padding:0 0 4px;letter-spacing:.3px"></div>
+    <div style="position:relative;height:130px;width:100%"><canvas id="pingChart"></canvas></div>
     <div class="loss-row" id="loss-row"></div>
   </div>
 
@@ -425,44 +716,88 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
   </div>
   <div id="ping-log"></div>
 
-</div>
+</section>
+
+      <!-- WAN Link Check -->
+      <section class="card tools-module" id="wan-check-module" data-tool="wan-check" aria-labelledby="tools-wan-title">
+        <div class="card-header">
+          <span class="card-title" id="tools-wan-title">WAN Link Check</span>
+          <button class="btn btn-primary" id="wan-run-btn">Run Test</button>
+        </div>
+        <div class="card-desc">Runs a short traceroute + 10 pings to 8.8.8.8 in parallel. Finds the first hop beyond your gateway (ISP edge), reports the WAN segment latency, and confirms connectivity. ISP edge RTT may be inflated — routers often rate-limit probe replies.</div>
+        <div class="wan-status-row" id="wan-status-row" style="display:none">
+          <span class="wan-badge" id="wan-badge">—</span>
+          <span class="wan-gw-label" id="wan-gw-label"></span>
+        </div>
+        <div class="metric-tiles" id="wan-tiles" style="display:none">
+          <div class="metric-tile"><div class="mt-lbl">WAN Loss</div><div class="mt-val" id="wan-loss">—</div></div>
+          <div class="metric-tile"><div class="mt-lbl">Avg RTT</div><div class="mt-val" id="wan-avg">—</div></div>
+          <div class="metric-tile"><div class="mt-lbl">ISP Edge</div><div class="mt-val" id="wan-isp-rtt">—</div></div>
+          <div class="metric-tile"><div class="mt-lbl">WAN Segment</div><div class="mt-val" id="wan-segment">—</div></div>
+        </div>
+        <div class="wan-hops" id="wan-hops" style="display:none"></div>
+        <details id="wan-raw-details" style="display:none">
+          <summary style="cursor:pointer;padding:10px 16px;font-size:11px;color:var(--text-dim);border-top:1px solid var(--border);user-select:none">Raw traceroute</summary>
+          <pre class="result-pre" id="wan-raw" style="border-top:0;padding-top:4px"></pre>
+        </details>
+        <pre class="result-pre" id="wan-result"></pre>
+      </section>
 
       <!-- DNS -->
-      <div class="card">
+      <section class="card tools-module" data-tool="dns" aria-labelledby="tools-dns-title">
         <div class="card-header">
-          <span class="card-title">DNS Lookup Comparison</span>
+          <span class="card-title" id="tools-dns-title">DNS Lookup Comparison</span>
           <button class="btn btn-primary" id="dns-run-btn">Run Test</button>
         </div>
-        <div class="card-desc">Resolves the same hostname on several public resolvers and compares response times.</div>
+        <div class="card-desc">Resolves the same name on System DNS, Google, Cloudflare, and Quad9 <strong style="color:var(--text-slate)">in parallel</strong>; shows query time and answer RRs (A or AAAA).</div>
         <div class="card-body" style="padding-bottom:0">
-          <div style="display:flex;gap:8px;align-items:center">
-            <input class="input" id="dns-host-input" type="text" value="google.com" placeholder="hostname" style="width:220px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input class="input" id="dns-host-input" type="text" value="google.com" placeholder="hostname" style="width:220px" autocomplete="off" spellcheck="false" aria-label="DNS hostname">
+            <label class="lbl" for="dns-record-type" style="margin:0">Type</label>
+            <select class="input" id="dns-record-type" style="width:auto;padding:6px 10px" aria-label="DNS record type">
+              <option value="A" selected>A</option>
+              <option value="AAAA">AAAA</option>
+            </select>
           </div>
         </div>
         <div class="dns-bars" id="dns-bars" style="display:none"></div>
         <pre class="result-pre" id="dns-result"></pre>
-      </div>
+      </section>
 
       <!-- Speed test -->
-      <div class="card">
+      <section class="card tools-module" data-tool="speed" aria-labelledby="tools-speed-title">
         <div class="card-header">
-          <span class="card-title">Speed Test</span>
+          <span class="card-title" id="tools-speed-title">Speed Test</span>
           <button class="btn btn-primary" id="speed-run-btn">Run Test</button>
         </div>
-        <div class="card-desc">Uses Apple's networkQuality tool (macOS 12+). Measures download, upload, responsiveness, and base RTT.</div>
+        <div class="card-desc">Uses Apple's networkQuality tool (macOS 12+). Shorter max runtime caps wall time with <code style="color:var(--sky)">-M</code> (less stable than a full run).</div>
+        <div class="ctrl-row" style="margin-top:8px;flex-wrap:wrap;gap:10px">
+          <label class="lbl" for="speed-max-sec" style="margin:0">Max runtime (s)</label>
+          <input class="input" id="speed-max-sec" type="number" min="20" max="90" step="1" placeholder="default (full)" style="width:140px" title="Leave empty for Apple's default duration. 20–90 when set." aria-label="networkQuality max runtime seconds">
+        </div>
+        <div id="speed-run-row" class="speed-run-row" style="display:none" aria-hidden="true">
+          <div class="speed-run-track" role="progressbar" aria-label="Speed test in progress"><div class="speed-indeterminate"></div></div>
+          <span id="speed-run-elapsed" class="speed-run-elapsed">0.0 s</span>
+        </div>
+        <div id="speed-meta" class="speed-meta" style="display:none"></div>
         <div class="metric-tiles" id="speed-tiles" style="display:none">
           <div class="metric-tile"><div class="mt-lbl">Download</div><div class="mt-val" id="sp-dl">—</div></div>
           <div class="metric-tile"><div class="mt-lbl">Upload</div><div class="mt-val" id="sp-ul">—</div></div>
           <div class="metric-tile"><div class="mt-lbl">RPM</div><div class="mt-val" id="sp-rpm">—</div></div>
           <div class="metric-tile"><div class="mt-lbl">Base RTT</div><div class="mt-val" id="sp-rtt">—</div></div>
         </div>
+        <div class="dns-bars" id="speed-bars" style="display:none"></div>
         <pre class="result-pre" id="speed-result"></pre>
-      </div>
+        <details class="speed-json-details" id="speed-json-details" style="display:none">
+          <summary>Raw JSON</summary>
+          <pre class="result-pre" id="speed-json-pre"></pre>
+        </details>
+      </section>
 
       <!-- iperf3 -->
-      <div class="card">
+      <section class="card tools-module" data-tool="iperf" aria-labelledby="tools-iperf-title">
         <div class="card-header">
-          <span class="card-title">LAN Throughput (iperf3)</span>
+          <span class="card-title" id="tools-iperf-title">LAN Throughput (iperf3)</span>
         </div>
         <div class="card-desc">Requires iperf3 on this Mac and a server running <code style="color:var(--sky)">iperf3 -s</code> on the target host.</div>
         <div class="ctrl-row">
@@ -476,32 +811,48 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
           <div class="metric-tile"><div class="mt-lbl">Duration</div><div class="mt-val" id="ip-dur">—</div></div>
         </div>
         <pre class="result-pre" id="iperf-result"></pre>
-      </div>
+      </section>
 
-      <!-- Traceroute -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Traceroute</span>
+      <!-- Traceroute — one panel: toolbar + path + raw -->
+      <section class="card trace-dash tools-module" id="trace-module" data-tool="traceroute" aria-labelledby="tools-trace-title">
+        <div class="tr-ref-panel-root">
+          <div class="tr-ref-toolbar">
+            <div class="tr-ref-toolbar-top">
+              <span class="tr-ref-toolbar-title" id="tools-trace-title">Traceroute</span>
+              <button class="btn btn-primary tr-ref-run-btn" type="button" id="trace-run-btn">Run</button>
+            </div>
+            <div class="tr-ref-toolbar-controls">
+              <div class="tr-ref-pills">
+                <button type="button" class="tr-ref-pill" id="trace-pill-gateway">Gateway</button>
+                <button type="button" class="tr-ref-pill tr-ref-pill-active" data-trace-host="8.8.8.8">8.8.8.8</button>
+                <button type="button" class="tr-ref-pill" data-trace-host="1.1.1.1">1.1.1.1</button>
+                <button type="button" class="tr-ref-pill" data-trace-host="google.com">google.com</button>
+              </div>
+              <div class="tr-ref-sep" aria-hidden="true"></div>
+              <input class="input tr-ref-host-input" id="trace-host" type="text" value="8.8.8.8" placeholder="Hostname or IP — Enter to run" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+          <p class="tr-ref-toolbar-desc">UDP · 3 probes per TTL · 32 hops max · Grid shows hostnames when the OS resolves them, IPv4 ASN (Team Cymru), and per-hop Δ vs the previous reply. Probe no-reply % = probes with no RTT in the trace output ÷ total probes (hover the stat for detail; not end-to-end traffic loss). Segment and Latency bars use the same width (this hop vs the slowest replying hop on the run); Segment fill colors by path role, Latency fill by absolute response time.</p>
+          <div id="trace-hops-wrap" class="trace-hops-scroll" aria-label="Traceroute hops"></div>
+          <details class="trace-raw-details" id="trace-raw-details">
+            <summary>Raw traceroute output</summary>
+            <pre class="result-pre" id="trace-result"></pre>
+          </details>
         </div>
-        <div class="card-desc">Shows each hop to the target — useful for spotting routing loops or last-mile delays.</div>
-        <div class="ctrl-row">
-          <input class="input" id="trace-host" type="text" value="8.8.8.8" placeholder="hostname or IP" style="width:200px">
-          <button class="btn btn-primary" id="trace-run-btn">Run</button>
-        </div>
-        <pre class="result-pre" id="trace-result"></pre>
-      </div>
+      </section>
 
       <!-- Interfaces -->
-      <div class="card">
+      <section class="card tools-module" data-tool="interfaces" aria-labelledby="tools-iface-title">
         <div class="card-header">
-          <span class="card-title">Network Interfaces</span>
+          <span class="card-title" id="tools-iface-title">Network Interfaces</span>
           <button class="btn btn-ghost" id="iface-run-btn">Refresh</button>
         </div>
         <div class="card-desc">Snapshot of interfaces, routes, and default gateway.</div>
         <pre class="result-pre" id="iface-result"></pre>
-      </div>
+      </section>
 
-    </div>
+    </div><!-- /tools-stack -->
+    </div><!-- /page-content -->
   </div><!-- /tab-tools -->
 
   <!-- ══════════════════════════════════════════════════════════ -->
@@ -581,190 +932,106 @@ html,body{height:100%;background:var(--bg-page);color:var(--text-body);font-fami
     </div>
   </div><!-- /tab-info -->
 
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SECURITY TAB                                               -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="tab-security" class="tab-panel tab-panel--security scrollable">
+    <div class="page-content security-page">
+      <header class="security-toolbar">
+        <span class="security-toolbar-title">Security overview</span>
+        <button class="btn btn-ghost" type="button" id="sec-refresh-btn">Refresh network info</button>
+      </header>
+
+      <section class="security-band" aria-labelledby="sec-band-posture">
+        <h2 class="security-band-title" id="sec-band-posture">Scope &amp; exposure</h2>
+        <p class="card-desc" style="margin:-4px 0 14px;font-size:11px;color:var(--text-muted);max-width:90ch">NetScope stays on <span class="security-em">127.0.0.1</span>; the other columns refresh from <span class="security-em">/api/network/info</span> (same as the Info tab) for proxy, public IPs, Wi‑Fi, and DNS — useful next to VPN / leak checks.</p>
+        <div class="security-band-grid">
+          <div class="card">
+            <div class="card-header"><span class="card-title">NetScope</span></div>
+            <div class="card-desc">Local-only: no remote control, no bundled telemetry, no accounts.</div>
+            <div class="info-list">
+              <div class="info-row"><span class="info-lbl">HTTP UI</span><span class="info-val sm" id="sec-bind">127.0.0.1:8765</span></div>
+              <div class="info-row"><span class="info-lbl">Live feed</span><span class="info-val sm">WebSocket · same host</span></div>
+              <div class="info-row"><span class="info-lbl">Snapshots</span><span class="info-val sm">~/.netscope/ SQLite</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Egress &amp; proxy</span></div>
+            <div class="card-desc">Outbound path hints.</div>
+            <div class="info-list">
+              <div class="info-row"><span class="info-lbl">HTTP proxy</span><span class="info-val" id="sec-proxy">—</span></div>
+              <div class="info-row"><span class="info-lbl">Public IPv4</span><span class="info-val" id="sec-public-v4">—</span></div>
+              <div class="info-row"><span class="info-lbl">Public IPv6</span><span class="info-val sm" id="sec-public-v6">—</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Wi‑Fi link</span></div>
+            <div class="card-desc">Active interface.</div>
+            <div class="info-list">
+              <div class="info-row"><span class="info-lbl">Security</span><span id="sec-wifi-security">—</span></div>
+              <div class="info-row"><span class="info-lbl">SSID</span><span class="info-val" id="sec-wifi-ssid">—</span></div>
+              <div class="info-row"><span class="info-lbl">BSSID</span><span class="info-val sm" id="sec-wifi-bssid">—</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">DNS (IPv4)</span></div>
+            <div class="card-desc">System resolvers.</div>
+            <div class="info-list">
+              <div class="info-row"><span class="info-lbl">Servers</span><span class="info-val sm" id="sec-dns-v4">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card sec-nmap-card">
+          <div class="card-header sec-nmap-card-header">
+            <span class="card-title">nmap</span>
+            <div class="sec-nmap-card-actions">
+              <button class="btn btn-ghost" type="button" id="sec-nmap-clear">Clear</button>
+              <button class="btn btn-ghost" type="button" id="sec-nmap-copy">Copy</button>
+              <button class="btn btn-ghost" type="button" id="sec-nmap-save">Save</button>
+              <button class="btn btn-primary" type="button" id="sec-nmap-run">Run scan</button>
+            </div>
+          </div>
+          <div class="card-desc">Optional <code style="color:var(--sky)">nmap</code> from Homebrew. Uses <span class="security-em">TCP connect</span> (<code style="color:var(--sky)">-sT</code>) so it works without root on macOS. Open ports are parsed from XML; <span class="security-em">service names</span> need the <strong style="color:var(--text-slate)">+ Service versions</strong> preset (<code style="color:var(--sky)">-sV</code>). Only scan hosts and networks you own or have explicit permission to test.</div>
+          <div class="card-body">
+            <p id="sec-nmap-version" class="sec-nmap-version" aria-live="polite"></p>
+            <div class="sec-nmap-controls">
+              <div class="sec-nmap-pills" role="group" aria-label="Scan preset">
+                <button type="button" class="sec-nmap-pill active" data-nmap-preset="quick">Quick ports</button>
+                <button type="button" class="sec-nmap-pill" data-nmap-preset="services">+ Service versions</button>
+                <button type="button" class="sec-nmap-pill" data-nmap-preset="safe_scripts">+ Safe NSE scripts</button>
+                <button type="button" class="sec-nmap-pill" data-nmap-preset="vuln">+ Vuln scripts</button>
+                <button type="button" class="sec-nmap-pill" data-nmap-preset="discovery">Discovery</button>
+                <button type="button" class="sec-nmap-pill" data-nmap-preset="ssl">TLS 443</button>
+                <button type="button" class="sec-nmap-pill" data-nmap-preset="udp_top">UDP top</button>
+              </div>
+              <p id="sec-nmap-preset-hint" style="margin:0 0 6px;font-size:10px;color:var(--text-dim);max-width:85ch"></p>
+              <div class="sec-nmap-row">
+                <input class="input sec-nmap-target" id="sec-nmap-host" type="text" value="127.0.0.1" placeholder="IPv4 / hostname" autocomplete="off" spellcheck="false" aria-label="nmap target">
+                <button class="btn btn-ghost" type="button" id="sec-nmap-gateway">Use gateway</button>
+              </div>
+              <p id="sec-nmap-status" style="margin:10px 0 0;font-size:10px;color:var(--text-dim)"></p>
+            </div>
+            <div id="sec-nmap-summary" class="sec-nmap-summary" aria-label="Open ports summary"></div>
+            <div class="sec-nmap-out" aria-label="nmap output">
+              <pre class="result-pre" id="nmap-result"></pre>
+            </div>
+          </div>
+        </div>
+      </section><!-- /security-band posture + nmap -->
+    </div>
+  </div><!-- /tab-security -->
+
 </div>
-<script>
-const N = 80;
-let pingHistory = new Array(N).fill(null);
-let lossHistory = new Array(N).fill(false);
-let seq = 0;
-let current = null;
-
-function pingColor(ms) {
-  if (ms === null) return '#ef4444';
-  if (ms < 30) return '#22c55e';
-  if (ms < 80) return '#f59e0b';
-  return '#ef4444';
-}
-
-const lossRow = document.getElementById('loss-row');
-const ticks = Array.from({length: N}, () => {
-  const d = document.createElement('div');
-  d.className = 'loss-tick';
-  lossRow.appendChild(d);
-  return d;
-});
-
-const ctx = document.getElementById('pingChart').getContext('2d');
-const chart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: new Array(N).fill(''),
-    datasets: [{
-      data: [...pingHistory],
-      borderWidth: 1.5,
-      pointRadius: 2,
-      pointBorderWidth: 0,
-      fill: false,
-      tension: 0.3,
-      pointBackgroundColor: pingHistory.map(pingColor),
-      segment: { borderColor: c => pingColor(c.p1.parsed.y) }
-    }]
-  },
-  options: {
-    responsive: false,
-    animation: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#111418', borderColor: '#1a2030', borderWidth: 1,
-        titleColor: '#64748b', bodyColor: '#e2e8f0',
-        titleFont: { family: 'JetBrains Mono', size: 10 },
-        bodyFont: { family: 'JetBrains Mono', size: 11 },
-        callbacks: { label: c => c.parsed.y != null ? c.parsed.y + ' ms' : 'lost' }
-      }
-    },
-    scales: {
-      x: { display: false },
-      y: {
-        min: 0, suggestedMax: 100,
-        grid: { color: '#1a2030', drawBorder: false },
-        border: { display: false },
-        ticks: { color: '#334155', font: { size: 9, family: 'JetBrains Mono' }, callback: v => v + 'ms', maxTicksLimit: 5 }
-      }
-    }
-  },
-  plugins: [{
-    beforeDraw(chart) {
-      const { ctx, chartArea: { left, right }, scales: { y } } = chart;
-      [[30,'#22c55e'],[80,'#f59e0b']].forEach(([val, color]) => {
-        const yp = y.getPixelForValue(val);
-        ctx.save();
-        ctx.strokeStyle = color + '44';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4,4]);
-        ctx.beginPath(); ctx.moveTo(left,yp); ctx.lineTo(right,yp); ctx.stroke();
-        ctx.restore();
-      });
-    }
-  }]
-});
-
-function setMetric(id, val, color) {
-  const el = document.getElementById(id);
-  el.textContent = val !== null ? val : '--';
-  el.style.color = color;
-}
-
-function render() {
-  chart.data.datasets[0].data = [...pingHistory];
-  chart.data.datasets[0].pointBackgroundColor = pingHistory.map(pingColor);
-  chart.update('none');
-  lossHistory.forEach((lost, i) => { ticks[i].style.background = lost ? '#ef444466' : '#1a2030'; });
-  const valid = pingHistory.filter(v => v !== null && v > 0);
-  const min = valid.length ? Math.min(...valid) : null;
-  const max = valid.length ? Math.max(...valid) : null;
-  const avg = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : null;
-  const lossPct = Math.round(lossHistory.filter(Boolean).length / N * 1000) / 10;
-  setMetric('m-cur', current !== null ? (Math.round(current*10)/10) : null, pingColor(current));
-  setMetric('m-min', min !== null ? min.toFixed(1) : null, pingColor(min));
-  setMetric('m-avg', avg !== null ? (Math.round(avg*10)/10) : null, pingColor(avg));
-  setMetric('m-max', max !== null ? max.toFixed(1) : null, pingColor(max));
-  setMetric('m-jit', '--', '#64748b');
-  setMetric('m-loss', lossPct.toFixed(1), lossPct===0?'#22c55e':lossPct<2?'#f59e0b':'#ef4444');
-}
-
-function addLogRow(s, target, rtt, lost) {
-  const log = document.getElementById('ping-log');
-  const row = document.createElement('div');
-  row.className = 'log-row';
-  row.innerHTML = `
-    <div class="log-dot" style="background:${lost?'#ef4444':'#22c55e'}"></div>
-    <div class="log-seq">${s}</div>
-    <div class="log-target">${target}</div>
-    <div class="log-rtt" style="color:${pingColor(rtt)}">${rtt!==null?rtt.toFixed(1)+' ms':'lost'}</div>
-  `;
-  log.insertBefore(row, log.firstChild);
-  while (log.children.length > 200) log.removeChild(log.lastChild);
-}
-
-function clearLog() { document.getElementById('ping-log').innerHTML=''; seq=0; }
-
-function applyTarget() {
-  const host = document.getElementById('ping-input').value.trim();
-  if (!host) return;
-  const applyBtn = document.querySelector('.ping-module .ping-apply');
-  if (applyBtn) applyBtn.disabled = true;
-  fetch('/api/ping/target', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ host }),
-  })
-    .then(async r => {
-      if (!r.ok) return;
-      pingHistory = new Array(N).fill(null);
-      lossHistory = new Array(N).fill(false);
-      clearLog();
-      chart.data.datasets[0].data = [...pingHistory];
-      chart.data.datasets[0].pointBackgroundColor = pingHistory.map(pingColor);
-      chart.update('none');
-      lossHistory.forEach((lost, i) => { ticks[i].style.background = lost ? '#ef444466' : '#1a2030'; });
-      render();
-    })
-    .finally(() => { if (applyBtn) applyBtn.disabled = false; });
-}
-
-function quickSet(host, btn) {
-  document.querySelectorAll('.ping-module .pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('ping-input').value = host;
-  applyTarget();
-}
-
-function updatePingModule(data) {
-  const rtt = data.ping != null ? data.ping : null;
-  const lost = rtt === null;
-  current = rtt;
-  pingHistory.shift(); pingHistory.push(rtt);
-  lossHistory.shift(); lossHistory.push(lost);
-  seq++;
-  const target = data.ping_target || document.getElementById('ping-input').value || '8.8.8.8';
-  if (data.ping_target) {
-    const inp = document.getElementById('ping-input');
-    if (inp) inp.value = data.ping_target;
-    document.querySelectorAll('.ping-module .pill').forEach(p => {
-      const label = (p.textContent || '').trim();
-      p.classList.toggle('active', label === data.ping_target);
-    });
-  }
-  if (data.jitter_ms != null) setMetric('m-jit', data.jitter_ms.toFixed(1), data.jitter_ms > 20 ? '#f59e0b' : '#22c55e');
-  addLogRow(seq, target, rtt, lost);
-  render();
-}
-
-function sizePingChart() {
-  const el = document.getElementById("pingChart");
-  if (!el || typeof chart === "undefined" || !chart) return;
-  const w = Math.max(260, Math.floor((el.parentElement && el.parentElement.clientWidth) || el.clientWidth || 400));
-  try {
-    chart.resize(w, 130);
-    chart.update("none");
-  } catch (e) { /* Chart not ready */ }
-}
-
-render();
-requestAnimationFrame(() => requestAnimationFrame(sizePingChart));
-window.addEventListener("resize", sizePingChart);
-</script>
-<script src="/static/app.js"></script>
+<script src="/static/utils.js?v=__STATIC_V__"></script>
+<script src="/static/signal.js?v=__STATIC_V__"></script>
+<script src="/static/ping.js?v=__STATIC_V__"></script>
+<script src="/static/traceroute.js?v=__STATIC_V__"></script>
+<script src="/static/tools.js?v=__STATIC_V__"></script>
+<script src="/static/scan.js?v=__STATIC_V__"></script>
+<script src="/static/netinfo.js?v=__STATIC_V__"></script>
+<script src="/static/security.js?v=__STATIC_V__"></script>
+<script src="/static/session.js?v=__STATIC_V__"></script>
+<script src="/static/ws.js?v=__STATIC_V__"></script>
+<script src="/static/app.js?v=__STATIC_V__"></script>
 </body>
 </html>

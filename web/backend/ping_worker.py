@@ -35,9 +35,9 @@ def _ping_via_system(target: str) -> Optional[float]:
     if not ping_bin:
         return None
     if platform.system() == "Darwin":
-        args = [ping_bin, "-c", "1", "-t", "2", target]
+        args = [ping_bin, "-c", "1", "-W", "2000", target]  # -W = wait ms on macOS
     else:
-        args = [ping_bin, "-c", "1", "-W", "2", target]
+        args = [ping_bin, "-c", "1", "-W", "2", target]  # -W = wait seconds on Linux
     try:
         proc = subprocess.run(
             args,
@@ -54,6 +54,21 @@ def _ping_via_system(target: str) -> Optional[float]:
     return None
 
 
+def _do_ping(target: str, icmp_fn: Any) -> Optional[float]:
+    """Single ping attempt; returns RTT ms or None."""
+    rtt: Optional[float] = None
+    if icmp_fn is not None:
+        try:
+            res = icmp_fn(target, count=1, timeout=1.5, privileged=False)
+            if res.packets_received > 0 and res.avg_rtt is not None:
+                rtt = float(res.avg_rtt)
+        except Exception:
+            log.debug("icmplib ping error for %s", target, exc_info=True)
+    if rtt is None:
+        rtt = _ping_via_system(target)
+    return rtt
+
+
 def _loop() -> None:
     icmp_ping: Any = None
     try:
@@ -63,19 +78,26 @@ def _loop() -> None:
 
     log.info("Ping worker started (target=%s)", ping_state.get_target())
 
-    while not _stop_event.is_set():
-        target = ping_state.get_target()
-        rtt: Optional[float] = None
-        if icmp_ping is not None:
-            try:
-                res = icmp_ping(target, count=1, timeout=1.5, privileged=False)
-                if res.packets_received > 0 and res.avg_rtt is not None:
-                    rtt = float(res.avg_rtt)
-            except Exception:
-                log.debug("icmplib ping error for %s", target, exc_info=True)
-        if rtt is None:
-            rtt = _ping_via_system(target)
+    warmed_target: Optional[str] = None  # last target that got a warmup ping
 
+    while not _stop_event.is_set():
+        if ping_state.is_paused():
+            _stop_event.wait(1.0)
+            continue
+
+        target = ping_state.get_target()
+
+        # Warmup on target change — primes DNS + ARP cache; result discarded
+        if target != warmed_target:
+            warmed_target = target
+            from web.backend.payload import reset_baseline
+            reset_baseline()
+            log.debug("Warmup ping → %s", target)
+            _do_ping(target, icmp_ping)
+            _stop_event.wait(1.0)
+            continue
+
+        rtt = _do_ping(target, icmp_ping)
         ping_state.record(rtt)
         _stop_event.wait(1.0)
 

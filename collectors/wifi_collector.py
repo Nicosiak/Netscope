@@ -50,7 +50,6 @@ def _ssid_from_scutil(iface_name: str = "en0") -> Tuple[Optional[str], Optional[
         return None, None
 
 from analysis.thresholds import band_from_channel_number
-from core.health_bus import bus
 
 
 def _iface() -> Any:
@@ -358,16 +357,7 @@ class WiFiPoller:
                     last_networks = fetch_nearby_networks()
                     last_scan_ts = now
                 data: Dict[str, Any] = {"connection": conn, "networks": last_networks, "ts": now}
-            except Exception as e:
-                msg = f"{type(e).__name__}: {e}"
-
-                def err_cb(m: str = msg) -> None:
-                    bus.emit_error("wifi", m)
-
-                try:
-                    self.queue_fn(err_cb)
-                except Exception:
-                    pass
+            except Exception:
                 last_scan_ts = 0.0
                 self._stop.wait(self.interval_s)
                 continue

@@ -11,17 +11,23 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Any, Dict, Literal, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi import Body, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
+from core.session import TAGS, Session
+from core.storage import storage as _storage
 from core.version import read_version
 from web.backend import payload as _payload
 from web.backend import ping_worker
 from web.backend.state import ping as ping_state
+from web.backend.state import session as _session_state
 
 log = logging.getLogger(__name__)
 _APP_VERSION = read_version()
@@ -29,12 +35,69 @@ _APP_VERSION = read_version()
 _FRONTEND = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 _INDEX_HTML = os.path.join(_FRONTEND, "index.html")
 
+# Computed once per process — restart uvicorn to pick up new frontend mtimes.
+_bundle_ver_cache: Optional[str] = None
+
+
+def _frontend_js_bundle_ver() -> str:
+    """Cache-bust query param when index or any frontend *.js changes (any depth)."""
+    global _bundle_ver_cache
+    if _bundle_ver_cache is not None:
+        return _bundle_ver_cache
+    try:
+        mt = int(os.path.getmtime(_INDEX_HTML))
+    except OSError:
+        _bundle_ver_cache = "0"
+        return _bundle_ver_cache
+    try:
+        for dirpath, _dirnames, filenames in os.walk(_FRONTEND):
+            for name in filenames:
+                if name.endswith(".js"):
+                    p = os.path.join(dirpath, name)
+                    if os.path.isfile(p):
+                        mt = max(mt, int(os.path.getmtime(p)))
+    except OSError:
+        pass
+    _bundle_ver_cache = str(mt)
+    return _bundle_ver_cache
+
+
+# ── Middleware: avoid stale JS/CSS in embedded WebView / browser cache ─
+
+class _NoCacheStaticMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith("/static/") and path.endswith((".js", ".css")):
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+        return response
+
 
 # ── Lifespan: start/stop background workers ───────────────────────
+
+def _warm_wifi_sync() -> None:
+    """First CoreWLAN / Wi-Fi import can be slow; run off the accept path."""
+    try:
+        from collectors.wifi_collector import fetch_current_connection
+
+        fetch_current_connection()
+    except Exception:
+        log.debug("Wi-Fi warm-up skipped", exc_info=True)
+
+
+async def _warm_wifi_collector() -> None:
+    try:
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, _warm_wifi_sync)
+    except Exception:
+        log.debug("Wi-Fi warm-up task failed", exc_info=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     ping_worker.ensure_running()
+    asyncio.create_task(_warm_wifi_collector())
     log.info("NetScope v%s web backend started", _APP_VERSION)
     yield
     ping_worker.stop()
@@ -46,14 +109,26 @@ app = FastAPI(
     version=_APP_VERSION,
     lifespan=lifespan,
 )
+app.add_middleware(_NoCacheStaticMiddleware)
 app.mount("/static", StaticFiles(directory=_FRONTEND), name="static")
 
 
 # ── Static serving ─────────────────────────────────────────────────
 
 @app.get("/")
-async def index() -> FileResponse:
-    return FileResponse(_INDEX_HTML)
+async def index() -> HTMLResponse:
+    try:
+        raw = Path(_INDEX_HTML).read_text(encoding="utf-8")
+    except OSError:
+        return HTMLResponse(
+            "<!DOCTYPE html><html><body>Missing index.html</body></html>",
+            status_code=500,
+        )
+    body = raw.replace("__STATIC_V__", _frontend_js_bundle_ver())
+    return HTMLResponse(
+        body,
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 
 # ── WebSocket live feed ────────────────────────────────────────────
@@ -95,6 +170,20 @@ PingTargetBody = HostBody
 DiagHost = HostBody
 
 
+class DnsCompareBody(BaseModel):
+    """Multi-resolver DNS compare: hostname + A or AAAA."""
+
+    host: str = "google.com"
+    record_type: Literal["A", "AAAA"] = "A"
+
+    @field_validator("host")
+    @classmethod
+    def host_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("host must not be empty")
+        return v.strip()
+
+
 class IperfBody(BaseModel):
     host: str
     direction: Literal["download", "upload"] = "download"
@@ -105,6 +194,38 @@ class IperfBody(BaseModel):
         if not v.strip():
             raise ValueError("host must not be empty")
         return v.strip()
+
+
+class SpeedTestBody(BaseModel):
+    """Optional cap on networkQuality wall time (seconds, 20–90). Omitted = full default run."""
+
+    max_seconds: Optional[int] = Field(default=None, ge=20, le=90)
+
+
+class NmapScanBody(BaseModel):
+    """Bounded nmap presets; target must be a host you are allowed to scan."""
+
+    host: str = "127.0.0.1"
+    preset: Literal[
+        "quick",
+        "services",
+        "safe_scripts",
+        "vuln",
+        "discovery",
+        "ssl",
+        "udp_top",
+    ] = "quick"
+
+
+class SessionCreateBody(BaseModel):
+    customer_name: str
+    customer_address: str = ""
+    notes: str = ""
+
+
+class SessionPatchBody(BaseModel):
+    notes: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 
 # ── Helper ─────────────────────────────────────────────────────────
@@ -131,186 +252,155 @@ async def set_ping_target(body: PingTargetBody) -> Dict[str, str]:
     return {"target": host}
 
 
-# ── Network info ───────────────────────────────────────────────────
+@app.post("/api/ping/pause")
+async def toggle_ping_pause() -> Dict[str, bool]:
+    paused = ping_state.toggle_pause()
+    return {"paused": paused}
 
-@app.get("/api/network/info")
-async def network_info() -> Any:
+
+@app.get("/api/network/gateway")
+async def get_gateway() -> Dict[str, Any]:
     def _run() -> Dict[str, Any]:
-        import json as _json
         import re
         import subprocess
-        import urllib.request
-
-        info: Dict[str, Any] = {
-            # Connection
-            "gateway": None,
-            "gateway_v6": None,
-            "dns_servers": [],
-            "dns_v6": [],
-            "public_ip": None,
-            "public_ipv6": None,
-            "http_proxy": "None",
-            # Wi-Fi
-            "wifi_connected": False,
-            "wifi_ssid": None,
-            "wifi_bssid": None,
-            "wifi_vendor": None,
-            "wifi_security": None,
-            "private_ip": None,
-            "subnet_mask": None,
-            "subnet_cidr": None,
-            "ipv6_addresses": [],
-            "mac": None,
-        }
-
-        # ── Default gateway (IPv4) ──────────────────────────────────
-        iface_name = "en0"
         try:
             out = subprocess.check_output(
                 ["route", "-n", "get", "default"], text=True, timeout=3, stderr=subprocess.DEVNULL
             )
             m = re.search(r"gateway:\s+(\S+)", out)
-            if m:
-                info["gateway"] = m.group(1)
-            m = re.search(r"interface:\s+(\S+)", out)
-            if m:
-                iface_name = m.group(1)
+            return {"gateway": m.group(1) if m else None}
+        except Exception:
+            return {"gateway": None}
+    return await asyncio.get_running_loop().run_in_executor(None, _run)
+
+
+@app.post("/api/wan/check")
+async def wan_check() -> Dict[str, Any]:
+    def _run() -> Dict[str, Any]:
+        import ipaddress
+        import re
+        import subprocess
+        from concurrent.futures import ThreadPoolExecutor
+
+        # Get default gateway
+        gateway: Optional[str] = None
+        try:
+            route_out = subprocess.check_output(
+                ["route", "-n", "get", "default"], text=True, timeout=3, stderr=subprocess.DEVNULL
+            )
+            gm = re.search(r"gateway:\s+(\S+)", route_out)
+            gateway = gm.group(1) if gm else None
         except Exception:
             pass
 
-        # ── Default gateway (IPv6) — skip VPN tunnel interfaces ────
-        try:
-            out = subprocess.check_output(
-                ["netstat", "-rn", "-f", "inet6"], text=True, timeout=3, stderr=subprocess.DEVNULL
-            )
-            for line in out.splitlines():
-                parts = line.split()
-                if parts and parts[0] == "default" and len(parts) >= 2:
-                    gw = parts[1]
-                    # Skip link-local VPN gateways (fe80::%utunN)
-                    if not gw.startswith("fe80"):
-                        info["gateway_v6"] = gw
-                        break
-        except Exception:
-            pass
+        target = "8.8.8.8"
 
-        # ── ifconfig: private IP, subnet, MAC, IPv6 ────────────────
-        try:
-            out = subprocess.check_output(
-                ["ifconfig", iface_name], text=True, timeout=3, stderr=subprocess.DEVNULL
-            )
-            # Private IP
-            m = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", out)
-            if m:
-                info["private_ip"] = m.group(1)
-            # Subnet mask
-            m = re.search(r"netmask (0x[0-9a-f]+)", out)
-            if m:
-                n = int(m.group(1), 16)
-                info["subnet_mask"] = ".".join(str((n >> (24 - 8 * i)) & 0xFF) for i in range(4))
-                info["subnet_cidr"] = f"/{bin(n).count('1')}"
-            # MAC
-            m = re.search(r"ether ([0-9a-f:]+)", out)
-            if m:
-                info["mac"] = m.group(1).upper()
-            # IPv6 (exclude link-local fe80::)
-            ipv6s = re.findall(r"inet6 ([0-9a-f:]+)(?:%\S+)? prefixlen", out)
-            info["ipv6_addresses"] = [a for a in ipv6s if not a.startswith("fe80")]
-        except Exception:
-            pass
+        def _run_trace() -> Dict[str, Any]:
+            from collectors._subprocess import run_text
+            from collectors.traceroute_collector import nonblank_traceroute_lines, parse_traceroute_hops
+            try:
+                p = run_text(
+                    ["traceroute", "-q", "3", "-w", "1", "-m", "5", target],
+                    timeout=30.0,
+                )
+                raw = p.stdout or ""
+                hops = parse_traceroute_hops(nonblank_traceroute_lines(raw))
+                return {"hops": hops, "raw": raw}
+            except Exception as e:
+                return {"hops": [], "raw": str(e)}
 
-        # ── DNS servers ─────────────────────────────────────────────
-        try:
-            out = subprocess.check_output(
-                ["scutil", "--dns"], text=True, timeout=3, stderr=subprocess.DEVNULL
-            )
-            all_dns = list(dict.fromkeys(re.findall(r"nameserver\[\d+\] : (\S+)", out)))
-            info["dns_servers"] = [s for s in all_dns if ":" not in s][:4]
-            info["dns_v6"] = [s for s in all_dns if ":" in s][:4]
-        except Exception:
-            pass
+        def _run_ping() -> Dict[str, Any]:
+            try:
+                r = subprocess.run(
+                    ["ping", "-c", "10", "-i", "0.5", target],
+                    capture_output=True, text=True, timeout=20,
+                )
+                raw = r.stdout
+            except Exception as e:
+                return {"loss_pct": None, "avg_ms": None, "raw": str(e)}
+            lm = re.search(r"([\d.]+)%\s+packet loss", raw)
+            rm = re.search(r"min/avg/max/stddev\s*=\s*([\d.]+)/([\d.]+)/([\d.]+)", raw)
+            return {
+                "loss_pct": float(lm.group(1)) if lm else None,
+                "avg_ms": float(rm.group(2)) if rm else None,
+                "raw": raw,
+            }
 
-        # ── HTTP Proxy ──────────────────────────────────────────────
-        try:
-            out = subprocess.check_output(
-                ["scutil", "--proxy"], text=True, timeout=3, stderr=subprocess.DEVNULL
-            )
-            http_on  = re.search(r"HTTPEnable\s*:\s*(\d+)", out)
-            https_on = re.search(r"HTTPSEnable\s*:\s*(\d+)", out)
-            http_host = re.search(r"HTTPProxy\s*:\s*(\S+)", out)
-            http_port = re.search(r"HTTPPort\s*:\s*(\d+)", out)
-            if (http_on and http_on.group(1) == "1") or (https_on and https_on.group(1) == "1"):
-                host = http_host.group(1) if http_host else "?"
-                port = http_port.group(1) if http_port else ""
-                info["http_proxy"] = f"{host}:{port}" if port else host
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            tf = ex.submit(_run_trace)
+            pf = ex.submit(_run_ping)
+            trace = tf.result(timeout=35)
+            ping = pf.result(timeout=25)
+
+        def _is_private(ip: str) -> bool:
+            try:
+                a = ipaddress.ip_address(ip)
+                return bool(a.is_private or a.is_loopback or a.is_link_local)
+            except ValueError:
+                return False
+
+        hops = trace.get("hops", [])
+        gateway_hop: Optional[Dict[str, Any]] = None
+        isp_edge_hop: Optional[Dict[str, Any]] = None
+        for h in hops:
+            ip = h.get("ip")
+            if not ip:
+                continue
+            if _is_private(ip):
+                if gateway_hop is None and h.get("rtt_ms") is not None:
+                    gateway_hop = h
             else:
-                info["http_proxy"] = "None"
-        except Exception:
-            pass
+                if isp_edge_hop is None:
+                    isp_edge_hop = h
 
-        # ── Wi-Fi connection info ────────────────────────────────────
-        try:
-            from collectors.wifi_collector import fetch_current_connection
-            conn = fetch_current_connection()
-            has_rssi = isinstance(conn.get("rssi_dbm"), int) and conn["rssi_dbm"] != 0
-            info["wifi_connected"] = bool(conn.get("ssid")) or has_rssi
-            info["wifi_ssid"]     = conn.get("ssid")
-            info["wifi_bssid"]    = conn.get("bssid")
-            # Decode raw security integer to label
-            from collectors.wifi_collector import _SEC_NAMES  # type: ignore[attr-defined]
-            raw_sec = conn.get("security")
-            try:
-                info["wifi_security"] = _SEC_NAMES.get(int(raw_sec), raw_sec)
-            except (TypeError, ValueError):
-                info["wifi_security"] = raw_sec
-            if info["private_ip"] is None:
-                info["private_ip"] = None  # already set above
-        except Exception:
-            pass
+        gw_rtt = gateway_hop.get("rtt_ms") if gateway_hop else None
+        isp_rtt = isp_edge_hop.get("rtt_ms") if isp_edge_hop else None
+        wan_segment_ms: Optional[float] = None
+        if gw_rtt is not None and isp_rtt is not None:
+            wan_segment_ms = round(isp_rtt - gw_rtt, 2)
 
-        # ── External lookups — run in parallel to avoid serial timeouts ──
-        import concurrent.futures
+        ping_loss = ping.get("loss_pct")
+        if ping_loss is not None and ping_loss < 100:
+            wan_up: Optional[bool] = True
+        elif ping_loss == 100:
+            wan_up = False
+        else:
+            wan_up = None
 
-        def _vendor(bssid_or_mac: str) -> Optional[str]:
-            first_byte = int(bssid_or_mac.replace("-", ":").split(":")[0], 16)
-            if first_byte & 0x02:
-                return "Randomized / Local"
-            try:
-                oui = bssid_or_mac.replace(":", "-")[:8].upper()
-                url = f"https://api.macvendors.com/{oui}"
-                req = urllib.request.Request(url, headers={"User-Agent": "netscope/1.0"})
-                with urllib.request.urlopen(req, timeout=4) as r:
-                    return r.read().decode().strip()
-            except Exception:
-                return None
+        hops_out = [
+            {
+                "ttl": h.get("ttl"),
+                "ip": h.get("ip"),
+                "hostname": h.get("hostname"),
+                "rtt_ms": h.get("rtt_ms"),
+            }
+            for h in hops[:5]
+        ]
 
-        def _public_ip() -> Optional[str]:
-            try:
-                with urllib.request.urlopen("https://api.ipify.org?format=json", timeout=5) as r:
-                    return _json.loads(r.read())["ip"]
-            except Exception:
-                return None
-
-        def _public_ipv6() -> Optional[str]:
-            try:
-                with urllib.request.urlopen("https://api6.ipify.org?format=json", timeout=5) as r:
-                    return _json.loads(r.read())["ip"]
-            except Exception:
-                return None
-
-        bssid = info.get("wifi_bssid") or info.get("mac")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-            f_vendor = pool.submit(_vendor, bssid) if bssid else None
-            f_ip4    = pool.submit(_public_ip)
-            f_ip6    = pool.submit(_public_ipv6)
-            if f_vendor:
-                info["wifi_vendor"] = f_vendor.result()
-            info["public_ip"]   = f_ip4.result()
-            info["public_ipv6"] = f_ip6.result()
-
-        return info
+        return {
+            "gateway": gateway,
+            "target": target,
+            "wan_up": wan_up,
+            "gateway_rtt_ms": gw_rtt,
+            "isp_edge_ip": isp_edge_hop.get("ip") if isp_edge_hop else None,
+            "isp_edge_hostname": isp_edge_hop.get("hostname") if isp_edge_hop else None,
+            "isp_edge_rtt_ms": isp_rtt,
+            "wan_segment_ms": wan_segment_ms,
+            "ping_loss_pct": ping_loss,
+            "ping_avg_ms": ping.get("avg_ms"),
+            "hops": hops_out,
+            "raw_trace": trace.get("raw", ""),
+        }
 
     return await asyncio.get_running_loop().run_in_executor(None, _run)
+
+
+# ── Network info ───────────────────────────────────────────────────
+
+@app.get("/api/network/info")
+async def network_info() -> Any:
+    from collectors import network_info_collector
+    return await asyncio.get_running_loop().run_in_executor(None, network_info_collector.fetch)
 
 
 # ── Wi-Fi scan ─────────────────────────────────────────────────────
@@ -354,12 +444,15 @@ async def wifi_scan() -> Any:
 # ── DNS ────────────────────────────────────────────────────────────
 
 @app.post("/api/dns")
-async def run_dns(body: DiagHost) -> Any:
-    host = _sanitize(body.host)
+async def run_dns(body: DnsCompareBody) -> Any:
+    host = _sanitize(body.host.strip() or "google.com")
 
     def _run() -> Any:
         from collectors import dns_collector
-        return {"results": dns_collector.compare_servers(host)}
+        return {
+            "results": dns_collector.compare_servers(host, body.record_type),
+            "record_type": body.record_type,
+        }
 
     return await asyncio.get_running_loop().run_in_executor(None, _run)
 
@@ -367,11 +460,15 @@ async def run_dns(body: DiagHost) -> Any:
 # ── Speed test ─────────────────────────────────────────────────────
 
 @app.post("/api/speed")
-async def run_speed() -> Any:
+async def run_speed(body: SpeedTestBody = Body(default_factory=SpeedTestBody)) -> Any:
     def _run() -> Any:
         from collectors import speed_collector
-        data = speed_collector.run_network_quality()
-        return {"summary": speed_collector.summarize(data), "json": data.get("json")}
+        data = speed_collector.run_network_quality(max_runtime_sec=body.max_seconds)
+        return {
+            "summary": speed_collector.summarize(data),
+            "json": data.get("json"),
+            "metrics": speed_collector.extract_metrics(data),
+        }
 
     return await asyncio.get_running_loop().run_in_executor(None, _run)
 
@@ -385,6 +482,33 @@ async def run_traceroute(body: DiagHost) -> Any:
     def _run() -> Any:
         from collectors import traceroute_collector
         return traceroute_collector.traceroute(host)
+
+    return await asyncio.get_running_loop().run_in_executor(None, _run)
+
+
+# ── nmap (optional CLI) ─────────────────────────────────────────────
+
+@app.get("/api/nmap/version")
+async def nmap_version_info() -> Dict[str, Any]:
+    def _run() -> Dict[str, Any]:
+        from collectors import nmap_collector
+
+        return {
+            "available": nmap_collector.nmap_available(),
+            "version": nmap_collector.nmap_version_line(),
+        }
+
+    return await asyncio.get_running_loop().run_in_executor(None, _run)
+
+
+@app.post("/api/nmap")
+async def run_nmap_scan(body: NmapScanBody) -> Any:
+    host = _sanitize(body.host.strip() or "127.0.0.1")
+    log.info("nmap scan preset=%s target=%s", body.preset, host)
+
+    def _run() -> Any:
+        from collectors import nmap_collector
+        return nmap_collector.run_nmap(host, body.preset)
 
     return await asyncio.get_running_loop().run_in_executor(None, _run)
 
@@ -405,16 +529,180 @@ async def get_interfaces() -> Any:
 @app.post("/api/iperf")
 async def run_iperf(body: IperfBody) -> Any:
     host = _sanitize(body.host)
+    from collectors import iperf_collector
+    if not iperf_collector.iperf3_available():
+        raise HTTPException(status_code=503, detail="iperf3 not found — install with: brew install iperf3")
     reverse = body.direction == "download"
 
     def _run() -> Any:
-        from collectors import iperf_collector
-        if not iperf_collector.iperf3_available():
-            raise HTTPException(status_code=503, detail="iperf3 not found — install with: brew install iperf3")
         data = iperf_collector.run_iperf3(host, duration=10, reverse=reverse)
         result = iperf_collector.summarize_result(data)
         result["raw"] = data.get("raw", "")
         result["ok"] = data.get("ok", False)
         return result
 
+    return await asyncio.get_running_loop().run_in_executor(None, _run)
+
+
+# ── Customer sessions ───────────────────────────────────────────────
+
+def _session_to_dict(s: Session) -> Dict[str, Any]:
+    return {
+        "id": s.id,
+        "customer_name": s.customer_name,
+        "customer_address": s.customer_address,
+        "notes": s.notes,
+        "tags": s.tags,
+        "started_at": s.started_at,
+        "ended_at": s.ended_at,
+        "is_active": s.is_active,
+        "duration_s": round(s.duration_s, 1),
+    }
+
+
+@app.post("/api/sessions")
+async def create_session(body: SessionCreateBody) -> Dict[str, Any]:
+    s = Session(
+        customer_name=body.customer_name.strip(),
+        customer_address=body.customer_address.strip(),
+        notes=body.notes.strip(),
+    )
+    _storage.save_session(s)
+    _session_state.set(s.id)
+    return {"session": _session_to_dict(s)}
+
+
+@app.get("/api/sessions")
+async def list_sessions() -> Dict[str, Any]:
+    def _run() -> Dict[str, Any]:
+        if not _storage._conn:
+            return {"sessions": []}
+        cur = _storage._conn.execute(
+            "SELECT s.id, s.customer_name, s.customer_address, s.notes, s.tags, "
+            "s.started_at, s.ended_at, COUNT(sn.id) AS snapshot_count "
+            "FROM sessions s "
+            "LEFT JOIN snapshots sn ON sn.session_id = s.id AND sn.kind = 'stability' "
+            "GROUP BY s.id ORDER BY s.started_at DESC LIMIT 100"
+        )
+        rows = []
+        for r in cur.fetchall():
+            s = Session.from_dict({
+                "id": r[0], "customer_name": r[1], "customer_address": r[2],
+                "notes": r[3], "tags": r[4], "started_at": r[5], "ended_at": r[6],
+            })
+            d = _session_to_dict(s)
+            d["snapshot_count"] = r[7]
+            rows.append(d)
+        return {"sessions": rows}
+    return await asyncio.get_running_loop().run_in_executor(None, _run)
+
+
+@app.get("/api/sessions/active")
+async def get_active_session() -> Dict[str, Any]:
+    sid = _session_state.get()
+    if not sid:
+        return {"session": None}
+    def _run() -> Dict[str, Any]:
+        if not _storage._conn:
+            return {"session": None}
+        cur = _storage._conn.execute(
+            "SELECT id, customer_name, customer_address, notes, tags, started_at, ended_at "
+            "FROM sessions WHERE id = ?", (sid,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return {"session": None}
+        keys = ["id", "customer_name", "customer_address", "notes", "tags", "started_at", "ended_at"]
+        s = Session.from_dict(dict(zip(keys, row)))
+        return {"session": _session_to_dict(s)}
+    return await asyncio.get_running_loop().run_in_executor(None, _run)
+
+
+@app.post("/api/sessions/{session_id}/end")
+async def end_session(session_id: str) -> Dict[str, Any]:
+    _storage.end_session(session_id)
+    if _session_state.get() == session_id:
+        _session_state.set(None)
+    return {"ok": True}
+
+
+@app.patch("/api/sessions/{session_id}")
+async def patch_session(session_id: str, body: SessionPatchBody) -> Dict[str, Any]:
+    if body.notes is not None:
+        _storage.update_notes(session_id, body.notes)
+    if body.tags is not None:
+        valid = [t for t in body.tags if t in TAGS]
+        _storage.update_tags(session_id, valid)
+    return {"ok": True}
+
+
+@app.get("/api/sessions/{session_id}/snapshots")
+async def get_session_snapshots(session_id: str) -> Dict[str, Any]:
+    def _run() -> Dict[str, Any]:
+        stability = _storage.get_snapshots(session_id, "stability")
+        for s in stability:
+            s["kind"] = "stability"
+        spikes = _storage.get_snapshots(session_id, "spike")
+        for s in spikes:
+            s["kind"] = "spike"
+        merged = sorted(stability + spikes, key=lambda x: x["ts"])
+        return {"snapshots": merged}
+    return await asyncio.get_running_loop().run_in_executor(None, _run)
+
+
+@app.get("/api/sessions/{session_id}/summary")
+async def get_session_summary(session_id: str) -> Dict[str, Any]:
+    def _run() -> Dict[str, Any]:
+        snaps = _storage.get_snapshots(session_id, "stability")
+        spike_events = _storage.get_snapshots(session_id, "spike")
+
+        if not snaps:
+            return {
+                "snapshot_count": 0, "spike_event_count": len(spike_events),
+                "rssi": {}, "ping": {}, "loss": {}, "alerts": {},
+            }
+
+        # Prefer rssi_avg10 (2.5 s smoothed) over raw signal to reduce
+        # multipath bounce in the summary stats; fall back to signal if absent.
+        rssi_vals = [
+            s["rssi_avg10"] if s.get("rssi_avg10") is not None else s["signal"]
+            for s in snaps
+            if s.get("rssi_avg10") is not None or s.get("signal") is not None
+        ]
+        ping_vals = [s["avg_ms"] for s in snaps if s.get("avg_ms") is not None]
+        loss_vals = [s["loss"] for s in snaps if s.get("loss") is not None]
+        warn_count = sum(1 for s in snaps if s.get("alerts", {}).get("level") == "warning")
+        crit_count = sum(1 for s in snaps if s.get("alerts", {}).get("level") == "critical")
+
+        def _agg(vals: list) -> Dict[str, Any]:
+            if not vals:
+                return {}
+            return {
+                "min": round(min(vals), 1),
+                "max": round(max(vals), 1),
+                "avg": round(sum(vals) / len(vals), 1),
+            }
+
+        sess_row: Dict[str, Any] = {}
+        if _storage._conn:
+            cur = _storage._conn.execute(
+                "SELECT customer_name, customer_address, started_at, ended_at FROM sessions WHERE id=?",
+                (session_id,),
+            )
+            row = cur.fetchone()
+            if row:
+                sess_row = {
+                    "customer_name": row[0], "customer_address": row[1],
+                    "started_at": row[2], "ended_at": row[3],
+                }
+
+        return {
+            "snapshot_count": len(snaps),
+            "spike_event_count": len(spike_events),
+            "rssi": _agg(rssi_vals),
+            "ping": _agg(ping_vals),
+            "loss": _agg(loss_vals),
+            "alerts": {"warning": warn_count, "critical": crit_count},
+            **sess_row,
+        }
     return await asyncio.get_running_loop().run_in_executor(None, _run)

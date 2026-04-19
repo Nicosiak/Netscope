@@ -14,7 +14,7 @@ macOS WiFi and network diagnostics **web app**. **Current release: v1.0.0** (see
 
 ```
 collectors/            → Data acquisition — plain dicts, subprocess timeouts, daemon threads where used
-core/                  → Sanitization, SQLite session storage, alerts, health bus, session model
+core/                  → Sanitization, SQLite session storage, alerts, session model
 analysis/              → Thresholds, classification, recommendations (no UI, no I/O)
 web/
   backend/server.py    → FastAPI app, WebSocket feed, API routes

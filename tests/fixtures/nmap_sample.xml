@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" args="nmap -sT 127.0.0.1">
+<host>
+  <status state="up"/>
+  <address addr="127.0.0.1" addrtype="ipv4"/>
+  <hostnames/>
+  <ports>
+    <port protocol="tcp" portid="22">
+      <state state="open"/>
+      <service name="ssh" product="OpenSSH" version="9.0"/>
+    </port>
+    <port protocol="tcp" portid="443">
+      <state state="closed"/>
+      <service name="https"/>
+    </port>
+  </ports>
+</host>
+</nmaprun>
