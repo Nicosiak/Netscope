@@ -1,6 +1,6 @@
 # NetScope — path inventory (purpose only)
 
-**Use this doc as:** a **short** path → purpose table (low token cost for agents). **Use [CLAUDE.md](../CLAUDE.md) for:** the **full** file tree and APIs. **Security / threat model:** [OVERVIEW.md](OVERVIEW.md). **Diagrams / deep behavior:** [PROJECT_DEEP_DIVE.md](PROJECT_DEEP_DIVE.md). **Deferred work:** [BACKLOG.md](BACKLOG.md).
+**Use this doc as:** a **short** path → purpose table (low token cost for agents). **Use [CLAUDE.md](../CLAUDE.md) for:** the **full** file tree and APIs. **Security / threat model:** [OVERVIEW.md](OVERVIEW.md). **Diagrams / deep behavior:** [PROJECT_DEEP_DIVE.md](PROJECT_DEEP_DIVE.md). **Networking engineer notepad (gaps, tool composition):** [NETWORKING.md](NETWORKING.md). **Deferred work:** [BACKLOG.md](BACKLOG.md).
 
 Thin orientation table: **what each area is for**, not line-by-line code.
 
@@ -42,6 +42,7 @@ Thin orientation table: **what each area is for**, not line-by-line code.
 | `web/frontend/` | UI | SPA: `index.html`, modular `*.js`, `vendor/` Chart.js (often gitignored) | [CLAUDE.md](../CLAUDE.md) |
 | `tests/` | QA | pytest + fixtures; `validate_all.py` optional live Mac | — |
 | `scripts/` | dev | venv setup, run app, clean caches, test runner | — |
-| `docs/` | doc | OVERVIEW, DEEP_DIVE, [BACKLOG](BACKLOG.md), this file | — |
+| `docs/NETWORKING.md` | doc | **WIP** — engineer notepad: missed features, cross-tool accuracy, change notes | [BACKLOG](BACKLOG.md) |
+| `docs/` | doc | OVERVIEW, DEEP_DIVE, NETWORKING, [BACKLOG](BACKLOG.md), this file | — |
 
 **Generated / install-only (do not treat as “features”):** `.venv/`, `__pycache__/`, `.cache/` (pytest/ruff/hypothesis), legacy `.pytest_cache/` / `.ruff_cache/` / `.hypothesis/` if present, `web/frontend/vendor/` — see `.gitignore` and [scripts/clean_caches.sh](../scripts/clean_caches.sh).
