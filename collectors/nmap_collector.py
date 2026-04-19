@@ -14,6 +14,8 @@ import time
 import xml.etree.ElementTree as ET
 from typing import Any, Dict, List, Optional, Tuple
 
+import defusedxml.ElementTree as _safe_ET
+
 from core.subproc import run_text
 
 # (extra argv after ``nmap``, timeout seconds) — ``-oX -`` and host appended in run_nmap.
@@ -156,7 +158,7 @@ def _parse_nmap_xml(xml_text: str) -> Dict[str, Any]:
     if not xml_text or not xml_text.strip():
         return out
     try:
-        root = ET.fromstring(xml_text)
+        root = _safe_ET.fromstring(xml_text)
     except ET.ParseError:
         out["parse_error"] = "invalid_xml"
         return out

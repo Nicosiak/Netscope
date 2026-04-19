@@ -2,6 +2,7 @@
 pyobjc-framework-CoreWLAN>=11.0,<12.0
 pyobjc-framework-CoreLocation>=11.0,<12.0
 icmplib>=3.0.4,<4.0
+defusedxml>=0.7.1
 # Web app
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0

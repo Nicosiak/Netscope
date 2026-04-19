@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, List
+from typing import Any, Dict
+from uuid import UUID
 
 from fastapi import APIRouter
 
@@ -91,30 +92,34 @@ async def get_active_session() -> Dict[str, Any]:
 
 
 @router.post("/api/sessions/{session_id}/end")
-async def end_session(session_id: str) -> Dict[str, Any]:
-    _storage.end_session(session_id)
-    if _session_state.get() == session_id:
+async def end_session(session_id: UUID) -> Dict[str, Any]:
+    sid = str(session_id)
+    _storage.end_session(sid)
+    if _session_state.get() == sid:
         _session_state.set(None)
     return {"ok": True}
 
 
 @router.patch("/api/sessions/{session_id}")
-async def patch_session(session_id: str, body: SessionPatchBody) -> Dict[str, Any]:
+async def patch_session(session_id: UUID, body: SessionPatchBody) -> Dict[str, Any]:
+    sid = str(session_id)
     if body.notes is not None:
-        _storage.update_notes(session_id, body.notes)
+        _storage.update_notes(sid, body.notes)
     if body.tags is not None:
         valid = [t for t in body.tags if t in TAGS]
-        _storage.update_tags(session_id, valid)
+        _storage.update_tags(sid, valid)
     return {"ok": True}
 
 
 @router.get("/api/sessions/{session_id}/snapshots")
-async def get_session_snapshots(session_id: str) -> Dict[str, Any]:
+async def get_session_snapshots(session_id: UUID) -> Dict[str, Any]:
+    sid = str(session_id)
+
     def _run() -> Dict[str, Any]:
-        stability = _storage.get_snapshots(session_id, "stability")
+        stability = _storage.get_snapshots(sid, "stability")
         for s in stability:
             s["kind"] = "stability"
-        spikes = _storage.get_snapshots(session_id, "spike")
+        spikes = _storage.get_snapshots(sid, "spike")
         for s in spikes:
             s["kind"] = "spike"
         merged = sorted(stability + spikes, key=lambda x: x["ts"])
@@ -123,17 +128,19 @@ async def get_session_snapshots(session_id: str) -> Dict[str, Any]:
 
 
 @router.get("/api/sessions/{session_id}/summary")
-async def get_session_summary(session_id: str) -> Dict[str, Any]:
+async def get_session_summary(session_id: UUID) -> Dict[str, Any]:
+    sid = str(session_id)
+
     def _run() -> Dict[str, Any]:
-        snaps = _storage.get_snapshots(session_id, "stability")
-        spike_events = _storage.get_snapshots(session_id, "spike")
+        snaps = _storage.get_snapshots(sid, "stability")
+        spike_events = _storage.get_snapshots(sid, "spike")
         result = summarize_snapshots(snaps, spike_events)
 
         sess_row: Dict[str, Any] = {}
         if _storage._conn:
             cur = _storage._conn.execute(
                 "SELECT customer_name, customer_address, started_at, ended_at FROM sessions WHERE id=?",
-                (session_id,),
+                (sid,),
             )
             row = cur.fetchone()
             if row:
